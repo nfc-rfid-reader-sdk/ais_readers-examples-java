@@ -125,9 +125,7 @@ public enum E_ERROR_CODES{
     UNKNOWN_ERROR (0xFFFFFFFF),   
     MAX_DL_STATUS (0xFFFFFFFF),   
     LAST_ERROR (0xFFFFFFFF);   
-   
-
-	
+   	
    	 private int value;
 
      private E_ERROR_CODES(int value) {
@@ -146,10 +144,52 @@ static String sPlatform;
  * The type of platform 1: isLinux() 2: isWindows()
  * @return .so or .dll name based on the platform as String type
  */
+static public String GetLibFullPath() {
 
-private static String GetPlatformLib()
+    String lib_path = System.getProperty("user.dir");
+
+    switch(Platform.getOSType())
+    {
+        case Platform.UNSPECIFIED:
+            // throw exception
+            
+            break;
+            
+        case Platform.WINDOWS:
+            if (Platform.is64Bit()){
+               lib_path += "\\lib\\aisreaders\\windows\\x86_64\\"; 
+            }else{
+               lib_path += "\\lib\\aisreaders\\windows\\x86\\"; 
+            }                                
+            break;
+
+        case Platform.MAC:
+            if (Platform.is64Bit()){
+               lib_path += "\\lib\\aisreaders\\osx\\x86_64\\"; 
+            }
+            break;
+        case Platform.LINUX:
+            if (Platform.is64Bit()){
+                lib_path += "\\lib\\aisreaders\\linux\\x86_64\\";
+            }else
+            {
+               lib_path += "\\lib\\aisreaders\\linux\\x86\\"; 
+            }
+        default:            
+            lib_path += "/lib/aisreaders/";            
+            break;
+    }   
+    
+    lib_path += GetPlatformType();
+    System.out.println("GetLibFullPath(): " + lib_path);
+
+    return lib_path;
+}
+
+
+private static String GetPlatformType()
 {  
-  int osType = Platform.getOSType();	
+  int osType = Platform.getOSType();	  
   String libName ="ais_readers";
   String prefix = "";
   String postfix = "";
@@ -160,31 +200,34 @@ private static String GetPlatformLib()
 	  {
 		  case Platform.LINUX:
 		      prefix = "lib";
-		      extension = "so";
+		      extension = ".so";
 		      break;
 		
 		  case Platform.WINDOWS:
 		      prefix = "";
-		      extension = "dll";		      
+		      extension = ".dll";		      
 		      break;
 	  }
 	  
 	  if (Platform.is64Bit()){
-		  postfix += "-x86_64";		  
-	  } else 
-		  postfix +="x86";
-	  
-   platformType = prefix + libName + "-" + postfix + extension;
+		  postfix += "-x86_64";					  
+	  } else{ 
+		  postfix +="x86";	  	 		 
+	  }	   	 
+   
+	  platformType = prefix + libName + "-" + postfix + extension;	 
    return platformType;
 }
  
 
+
+
+
+
+
 public interface AisReaders extends Library{
-	
-	String libPath = "lib/aisreaders/";
-	String libName = GetPlatformLib();
-			
-	AisReaders aisReaders = (AisReaders)Native.loadLibrary(libPath + libName,AisReaders.class);
+				
+	AisReaders aisReaders = (AisReaders)Native.loadLibrary(GetLibFullPath(),AisReaders.class);
 	
 	
 	Pointer AIS_GetLibraryVersionStr();
@@ -203,7 +246,7 @@ public interface AisReaders extends Library{
 
    int AIS_List_GetInformation(PointerByReference pDevice_HND,
 						    PointerByReference pDevice_Serial,						    						    
-   		                IntByReference pDevice_type,
+   		                    IntByReference pDevice_type,
 						    IntByReference pDevice_ID,
 						    IntByReference pDevice_FW_VER,
 						    IntByReference pDevice_CommSpeed,
