@@ -21,40 +21,70 @@ import rs.dlogic.wrapper.AisWrapper.AisLibrary;
 
 
 
-interface AisFunctions{
-	     String AISGetLibraryVersionStr();
-    }
+//interface AisFunctions{
+//	     String AISGetLibraryVersionStr();
+//    }
 
 public class AisWrapper {	
 	
-	static AisLibrary libInstance;
+	static  AisLibrary libInstance;
 	AisWrapper(){
 		libInstance = AisLibrary.aisReaders;
-		AisFunctions listeners = new MyResponder();
-		this.addListener(listeners);
 	}
 	
-	private ArrayList<AisFunctions> aisFunctionsList = new ArrayList<AisFunctions>();	
+    
 	
-	public synchronized void addListener(AisFunctions listener){
-		if (!aisFunctionsList.contains(listener)){
-		     aisFunctionsList.add(listener);	
+	/**
+	 * functions implement
+	 * @author Vladan
+	 *
+	 */
+	public String AISGetLibraryVersionStr(){
+    	return libInstance.AIS_GetLibraryVersionStr().getString(0);
+    }
+	
+	public void AISListEraseAllDeviceForCheck(){
+		libInstance.AIS_List_EraseAllDevicesForCheck();
+	}
+	
+	public int AISListAddDeviceForCheck(int deviceType,int deviceId){
+		return libInstance.AIS_List_AddDeviceForCheck(deviceType, deviceId);
+	}
+	
+	public String AISGetDevicesForCheck(){
+		return libInstance.AIS_List_GetDevicesForCheck().getString(0);
+	}
+	
+
+	
+	
+	public enum E_KNOWN_DEVICE_TYPES{
+		DL_UNKNOWN_DEVICE  (0),				
+		DL_AIS_100 (1),
+		DL_AIS_20  (2),
+		DL_AIS_30  (3),
+		DL_AIS_35  (4),
+		DL_AIS_50  (5),
+		DL_AIS_110 (6),
+		DL_AIS_LOYALITY  (7),
+		DL_AIS_37 (8),		
+		DL_AIS_BMR (9),
+		DL_AIS_BASE_HD (10),
+		DL_AIS_BASE_HD_SDK (11),
+		DL_AIS_SYSTEM_TYPES_COUNT (12);
+		
+		private int devTypeValue;
+		private E_KNOWN_DEVICE_TYPES(int value){
+			this.devTypeValue = value;
+		}		
+		public int getDeviceTypes(){
+			return devTypeValue;
 		}
 		
 	}
 	
-	class MyResponder implements AisFunctions{				
-		@Override
-		public String AISGetLibraryVersionStr(){			   
-		       return libInstance.AIS_GetLibraryVersionStr().getString(0);
-		      
-	   }
-	}
 	
 	
-    public String AISGetLibraryVersionStr(){
-    	return (new MyResponder().AISGetLibraryVersionStr());
-    }
 	
 	public enum E_ERROR_CODES{
 	DL_OK (0x00),      
@@ -205,9 +235,7 @@ static public String GetLibFullPath() {
             break;
     }   
     
-    lib_path += GetPlatformType();
-    System.out.println("GetLibFullPath(): " + lib_path);
-
+    lib_path += GetPlatformType();  
     return lib_path;
 }
 
@@ -250,9 +278,7 @@ private static String GetPlatformType()
 public interface AisLibrary extends Library{
 		
 	AisLibrary aisReaders = (AisLibrary)Native.loadLibrary(GetLibFullPath(),AisLibrary.class);
-	
-	
-	
+			
 	Pointer AIS_GetLibraryVersionStr();
 	
 	int AIS_MainLoop(Pointer pDevice_HND, 
@@ -314,7 +340,7 @@ public interface AisLibrary extends Library{
    
    int AIS_ReadLog_File_Size(Pointer device);
 	
-	int AIS_ReadLog_File_Get(Pointer device, byte[] file);
+   int AIS_ReadLog_File_Get(Pointer device, byte[] file);
    
    int AIS_ReadLog(Pointer device, 
 			IntByReference log_action, 
@@ -350,9 +376,18 @@ public interface AisLibrary extends Library{
    
    void AIS_List_EraseAllDevicesForCheck();
    
-   	
+   Pointer AIS_List_GetDevicesForCheck();	
+   
+   
    int AIS_OpenLock(Pointer p);
-   	   
+   
+   
+   int device_type_enum2str(int devType, PointerByReference dev_type_str);       
+   
+   int device_type_str2enum(String devTypeStr,IntByReference devType);
+   
+   Pointer dl_status2str(int status);
+   
 }
    	   	   
 }
