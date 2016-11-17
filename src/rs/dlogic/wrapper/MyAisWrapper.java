@@ -9,6 +9,7 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import com.sun.jna.Pointer;
@@ -25,25 +26,67 @@ import rs.dlogic.wrapper.AisWrapper;
  *
  */
 
+
+
+
 public class MyAisWrapper extends AisWrapper {	
 	
 	String formatOut;
 	int DL_STATUS;	
     static AisLibrary libInstance;
     
+    PointerByReference hnd = new PointerByReference();
+	PointerByReference devSerial = new PointerByReference();
+	IntByReference devType = new IntByReference();
+	IntByReference devID = new IntByReference();
+	IntByReference devFW_VER = new IntByReference();
+	IntByReference devCommSpeed = new IntByReference();
+	byte[]devFTDI_Serial = new byte[9];
+	IntByReference devOpened = new IntByReference();
+	IntByReference devStatus = new IntByReference();
+	IntByReference systemStatus = new IntByReference();
+    
+    
+    
     MyAisWrapper(){
     	libInstance = AisLibrary.aisReaders;
     }
 
+    S_DEVICE dev_hnd;
     
+     
+    private List<String>myFormats = new ArrayList<String>();
+	private ArrayList<Pointer>HND_LIST = new ArrayList<Pointer>();
+    
+   
     //***************************************************************************
+   
     
+   void MyFormats(){
+	   //format_grid
+	   myFormats.add(0, "---------------------------------------------------------------------------------------------------------------------" );
+	   myFormats.add(1, "| indx|  Reader HANDLE   | SerialNm | Type h/d | ID  | FW   | speed   | FTDI: sn   | opened | DevStatus | SysStatus |" );
+	   myFormats.add(2,"| %3d | %016X | %d | %7d  | %2d  | %d  | %7d | %10s | %5d  | %8d  | %9d |\n");
+	   
+   }
+    
+   String AisOpen(){	  
+	   for (Pointer hnd : HND_LIST){
+		   DL_STATUS = libInstance.AIS_Open(hnd);		   
+		   formatOut += String.format("AIS_Open(0x%X):{ %d(%s):%s}\n", hnd.getInt(0), DL_STATUS,
+				                     Integer.toHexString(DL_STATUS), E_ERROR_CODES.DL_OK.getValue());		   
+	   }
+	   return formatOut; 
+   }
+   
+   
     void listDevices(){
     	prepareListForCheck();
     	System.out.println("checking...please wait...");
     	int devCount = AISListUpdateAndGetCount();    	    
     	formatOut = String.format("AIS_List_UpdateAndGetCount()= [%d]\n", devCount);
     	System.out.print(formatOut);
+    	
     }
     
     private int addDevice(int deviceType, int deviceId){
@@ -142,9 +185,67 @@ public class MyAisWrapper extends AisWrapper {
     	System.out.println(formatOut);
     }
     
+   
+    
+	void GetListInformation(){    	    	
+    	int devCount = AISListUpdateAndGetCount();
+    	if (devCount < 0) return;
+    	HND_LIST.clear();
+    	S_DEVICE dev = new S_DEVICE();    	    	
+    	for (int i = 0;i<devCount;i++)
+    	{
+    		DL_STATUS = libInstance.AIS_List_GetInformation(hnd, 
+    				                                        devSerial, 
+    				                                        devType, 
+    				                                        devID,
+    				                                        devFW_VER,
+    				                                        devCommSpeed,
+    				                                        devFTDI_Serial,    				                                        
+    				                                        devOpened, 
+    				                                        devStatus, 
+    				                                        systemStatus);
+    		if (DL_STATUS !=0) return;    		
+    		HND_LIST.add(hnd.getValue());    		
+    		AisOpen();
+    		dev.idx = 1;
+    		dev.hnd = hnd.getValue().getInt(0); 
+            dev.devSerial = devSerial.getValue().getInt(0); 
+            dev.devType = devType.getValue();
+            dev.devID = devID.getValue();
+            dev.devFW_VER = devFW_VER.getValue();
+            dev.devCommSpeed = devCommSpeed.getValue();
+            dev.devFTDI_Serial = devFTDI_Serial;                                 
+            dev.devOpened = devOpened.getValue();
+            dev.devStatus = devStatus.getValue();
+            dev.systemStatus = devStatus.getValue();
+            
+            System.out.println(myFormats.get(0) + "\n" + myFormats.get(1) + "\n");
+            //formatOut = String.format(myFormats.get(3),dev.idx,)
+    		System.out.format("| %3d | %016X | %d | %7d  | %2d  | %d  | %7d | %10s | %5d  | %8d  | %9d |\n",
+    				         dev.idx,
+    				         dev.hnd,
+    				         dev.devSerial,
+    				         dev.devType,
+    				         dev.devID,
+    				         dev.devFW_VER,
+    				         dev.devCommSpeed,
+    				         dev.devFTDI_Serial,
+    				         dev.devOpened,
+    				         dev.devStatus,
+    				         dev.systemStatus
+    				         );
+    	
+    	}
+    	
+    }
+    
+    
+    
     
     void init(){
     	listDevices();
+    	MyFormats();
+    	GetListInformation();
     }
     
     
