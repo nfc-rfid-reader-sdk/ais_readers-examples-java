@@ -41,8 +41,9 @@ public class MyAisWrapper extends AisWrapper {
     void listDevices(){
     	prepareListForCheck();
     	System.out.println("checking...please wait...");
-    	
-    	
+    	int devCount = AISListUpdateAndGetCount();    	    
+    	formatOut = String.format("AIS_List_UpdateAndGetCount()= [%d]\n", devCount);
+    	System.out.print(formatOut);
     }
     
     private int addDevice(int deviceType, int deviceId){
@@ -55,39 +56,31 @@ public class MyAisWrapper extends AisWrapper {
     
     private Boolean loadListFromFile(){
     	String fileName = "readers.ini";
+    	String devTypeStr;
     	File f = new File(fileName);
     	int addedDevType = 0;
     	int devId;
+    	
     	IntByReference devTypeEnum = new IntByReference();
         if (!f.exists()){
         	System.out.printf("File <%s> not found. \n",fileName);
         	return false;
         }
-        try {
-        	
+        try {        	
 			BufferedReader reader = new BufferedReader(new FileReader(fileName));
 			String line;
 			while ((line = reader.readLine()) !=null)
 			{				
-//				if (!line.startsWith("#")) // && !line.startsWith("\n") && !line.startsWith("\r\n"))
-//				{
-															
-					String []linePart = line.split("\\#\\: ");
-					
-					System.out.println(linePart[1]);																
-					//devId = Integer.parseInt(llineSplit[1]);
-					
-					//System.out.println("DevType=" + lineSplit[0]);					
-					//System.out.println("devID= " + devId);
-					
-//					devId = Integer.parseInt(lineSplit[1]);																										
-//					DL_STATUS = libInstance.device_type_str2enum(devType, devTypeEnum);
-//					if (addDevice(devTypeEnum.getValue(), devId) == 0){
-//						addedDevType ++;
-//					}
-				//}
+				if (line.startsWith("#")) continue;							    
+					String []linePart = line.trim().split(":");
+					if (linePart.length <= 1) continue;
+					   devTypeStr = linePart[0];
+					   devId = Integer.parseInt(linePart[1]);					 
+					   DL_STATUS = libInstance.device_type_str2enum(devTypeStr, devTypeEnum);
+					   if (addDevice(devTypeEnum.getValue(), devId) == 0){
+						  addedDevType ++;
 			}
-			
+		  }			
 		} catch (IOException e) {			
 			e.printStackTrace();
 		}		
@@ -99,10 +92,7 @@ public class MyAisWrapper extends AisWrapper {
 		}
         
     }
-    
-    
-    
-    
+               
     void listForCheckPrint(){
     	String getDevices;    	
     	PointerByReference dev_type_str = new PointerByReference();
@@ -129,7 +119,7 @@ public class MyAisWrapper extends AisWrapper {
     	AISListEraseAllDeviceForCheck();
     	if (!loadListFromFile()){
     		System.out.println("Tester try to connect with a Base HD device on any/unkown ID");
-    	
+    	    addDevice(E_KNOWN_DEVICE_TYPES.DL_AIS_BASE_HD_SDK.getDeviceTypes(),0);
     	
     	}
     	System.out.println("AIS_List_GetDevicesForCheck() AFTER LIST UPDATE");

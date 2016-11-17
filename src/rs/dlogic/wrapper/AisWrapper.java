@@ -55,7 +55,11 @@ public class AisWrapper {
 		return libInstance.AIS_List_GetDevicesForCheck().getString(0);
 	}
 	
-
+    public int AISListUpdateAndGetCount(){
+    	IntByReference deviceCount = new IntByReference();
+    	libInstance.AIS_List_UpdateAndGetCount(deviceCount);
+    	return deviceCount.getValue();
+    }
 	
 	
 	public enum E_KNOWN_DEVICE_TYPES{
