@@ -8,6 +8,8 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -35,26 +37,25 @@ public class MyAisWrapper extends AisWrapper {
 	int DL_STATUS;	
     static AisLibrary libInstance;
     
+    
     PointerByReference hnd = new PointerByReference();
 	PointerByReference devSerial = new PointerByReference();
 	IntByReference devType = new IntByReference();
 	IntByReference devID = new IntByReference();
 	IntByReference devFW_VER = new IntByReference();
 	IntByReference devCommSpeed = new IntByReference();
-	byte[]devFTDI_Serial = new byte[9];
+    byte[]devFTDI_Serial = new byte[9];
 	IntByReference devOpened = new IntByReference();
 	IntByReference devStatus = new IntByReference();
 	IntByReference systemStatus = new IntByReference();
-    
+        
     
     
     MyAisWrapper(){
     	libInstance = AisLibrary.aisReaders;
     }
 
-    S_DEVICE dev_hnd;
-    
-     
+    S_DEVICE dev_hnd;        
     private List<String>myFormats = new ArrayList<String>();
 	private ArrayList<Pointer>HND_LIST = new ArrayList<Pointer>();
     
@@ -66,10 +67,31 @@ public class MyAisWrapper extends AisWrapper {
 	   //format_grid
 	   myFormats.add(0, "---------------------------------------------------------------------------------------------------------------------" );
 	   myFormats.add(1, "| indx|  Reader HANDLE   | SerialNm | Type h/d | ID  | FW   | speed   | FTDI: sn   | opened | DevStatus | SysStatus |" );
-	   myFormats.add(2,"| %3d | %016X | %d | %7d  | %2d  | %d  | %7d | %10s | %5d  | %8d  | %9d |\n");
+	   myFormats.add(2,"| %3d | %016X | %08d | %7d  | %2d  | %d  | %7d | %10s | %5d  | %8d  | %9d |\n");
 	   
    }
-    
+   
+   String ShowMeni(){
+	   String myMeni = "--------------------------\n" 
+			   		 + "Press key to select action\n"
+			         + "q : List devices\t\t\to : Open device\t\t\t\tc : Close device "
+			         + "\nd : Get devices count\t\t\tt : Get time\t\t\t\tT : Set time"
+			         + "\nr : Real Time Events\t\t\tP : Set application password\t\tp : Change device password"
+			         + "\nl : Get log\t\t\t\tn : Get log by Index\t\t\tN : Get log by Time"
+			         + "\nu : Get unread log\t\t\tw : White-list Read\t\t\tW : White-list Write"
+			         + "\nb : Black-list Read\t\t\tB : Black-list Write\t\t\tL : Test Lights"
+			         + "\ng : Get IO state\t\t\tG : Open gate/lock\t\t\ty : Relay toggle state"
+			         + "\nE : EERPOM LOCK\t\t\t\te : EERPOM UNLOCK\t\t\tF : Firmware update"
+			         + "\ns : Settings read to file\t\tS : Settings write from file\t\ti : Device Information"
+			         + "\nm : Meni\t\t\t\tQ : Edit device list for checking"
+			         + "\nx : EXIT "
+			         + "\n--------------------------" ;      
+        
+	  return myMeni;
+   }
+   
+   
+   
    String AisOpen(){	  
 	   for (Pointer hnd : HND_LIST){
 		   DL_STATUS = libInstance.AIS_Open(hnd);		   
@@ -188,12 +210,27 @@ public class MyAisWrapper extends AisWrapper {
    
     
 	void GetListInformation(){    	    	
-    	int devCount = AISListUpdateAndGetCount();
+		
+		String s = "";
+		int devCount = AISListUpdateAndGetCount();
     	if (devCount < 0) return;
     	HND_LIST.clear();
     	S_DEVICE dev = new S_DEVICE();    	    	
     	for (int i = 0;i<devCount;i++)
     	{
+    		/*
+    		PointerByReference hnd = new PointerByReference();
+    		PointerByReference devSerial = new PointerByReference();
+    		IntByReference devType = new IntByReference();
+    		IntByReference devID = new IntByReference();
+    		IntByReference devFW_VER = new IntByReference();
+    		IntByReference devCommSpeed = new IntByReference();
+    	    byte[]devFTDI_Serial = new byte[9];
+    		IntByReference devOpened = new IntByReference();
+    		IntByReference devStatus = new IntByReference();
+    		IntByReference systemStatus = new IntByReference();
+    		*/
+    		
     		DL_STATUS = libInstance.AIS_List_GetInformation(hnd, 
     				                                        devSerial, 
     				                                        devType, 
@@ -208,8 +245,8 @@ public class MyAisWrapper extends AisWrapper {
     		HND_LIST.add(hnd.getValue());    		
     		AisOpen();
     		dev.idx = 1;
-    		dev.hnd = hnd.getValue().getInt(0); 
-            dev.devSerial = devSerial.getValue().getInt(0); 
+    		dev.hnd = hnd.getValue(); 
+            dev.devSerial = Integer.parseInt(devSerial.getValue().getString(0)); 
             dev.devType = devType.getValue();
             dev.devID = devID.getValue();
             dev.devFW_VER = devFW_VER.getValue();
@@ -218,26 +255,35 @@ public class MyAisWrapper extends AisWrapper {
             dev.devOpened = devOpened.getValue();
             dev.devStatus = devStatus.getValue();
             dev.systemStatus = devStatus.getValue();
-            
-            System.out.println(myFormats.get(0) + "\n" + myFormats.get(1) + "\n");
-            //formatOut = String.format(myFormats.get(3),dev.idx,)
-    		System.out.format("| %3d | %016X | %d | %7d  | %2d  | %d  | %7d | %10s | %5d  | %8d  | %9d |\n",
-    				         dev.idx,
-    				         dev.hnd,
-    				         dev.devSerial,
-    				         dev.devType,
-    				         dev.devID,
-    				         dev.devFW_VER,
-    				         dev.devCommSpeed,
-    				         dev.devFTDI_Serial,
-    				         dev.devOpened,
-    				         dev.devStatus,
-    				         dev.systemStatus
-    				         );
+           
+            System.out.println(myFormats.get(0) + "\n" + myFormats.get(1) + "\n" + myFormats.get(0));                                          
+    		try {  
+    			    			
+				s += String.format(myFormats.get(2),
+						         dev.idx,
+						         dev.hnd.getInt(0),
+						         dev.devSerial,
+						         dev.devType,
+						         dev.devID,
+						         dev.devFW_VER,
+						         dev.devCommSpeed,
+						         new String(devFTDI_Serial,"UTF-8"),
+						         dev.devOpened,
+						         dev.devStatus,
+						         dev.systemStatus);
+			   			         
+		       System.out.println(s += myFormats.get(0));
+				
+				
+			} catch (UnsupportedEncodingException e) {				
+				e.printStackTrace();
+			}
+    		
+    		
     	
     	}
     	
-    }
+}
     
     
     
@@ -246,6 +292,7 @@ public class MyAisWrapper extends AisWrapper {
     	listDevices();
     	MyFormats();
     	GetListInformation();
+    	System.out.println(ShowMeni());
     }
     
     

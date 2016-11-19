@@ -29,7 +29,7 @@ import java.util.Map;
 
 class S_DEVICE{
 	int idx;
-	int hnd;
+	Pointer hnd;
 	int devSerial;
 	int devType;
 	int devID;
