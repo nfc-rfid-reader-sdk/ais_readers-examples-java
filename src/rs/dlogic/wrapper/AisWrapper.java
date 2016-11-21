@@ -15,9 +15,11 @@ import com.sun.jna.ptr.ByteByReference;
 import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.ptr.LongByReference;
 import com.sun.jna.ptr.PointerByReference;
+import com.sun.org.apache.bcel.internal.generic.RET;
 
 import rs.dlogic.wrapper.AisWrapper.AisLibrary;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.Map;
@@ -41,6 +43,13 @@ class S_DEVICE{
 	int systemStatus;	
 }
 
+class RetValues{	
+	public long currentTime;
+    public int timezone;
+	public int DST;
+	public int offset;
+	public int dl_status;
+}
 
 
 public class AisWrapper {			
@@ -49,7 +58,9 @@ public class AisWrapper {
 		libInstance = AisLibrary.aisReaders;
 	}
 	
-
+	
+	
+	
 	/**
 	 * functions implement
 	 * @author Vladan
@@ -77,7 +88,28 @@ public class AisWrapper {
     	return deviceCount.getValue();
     }
 	
-	
+    public RetValues AISGetTime(Pointer devHnd){
+    	int DL_STATUS;
+    	RetValues rv = new RetValues(); 
+    	LongByReference currentTime = new LongByReference();
+    	IntByReference timezone = new IntByReference();
+    	IntByReference DST = new IntByReference();
+    	IntByReference offset = new IntByReference();
+    	DL_STATUS = libInstance.AIS_GetTime(devHnd, 
+    			                            currentTime, 
+    			                            timezone, 
+    			                            DST, 
+    			                            offset);    	    			    	    	   	
+	   rv.currentTime = currentTime.getValue();
+	   rv.DST = DST.getValue();
+	   rv.offset = offset.getValue();
+	   rv.timezone = timezone.getValue();
+	   rv.dl_status = DL_STATUS;
+       return rv;    			    		    
+    }
+    
+    
+    
 		
 static String sPlatform;
 static public String GetLibFullPath() {
@@ -259,11 +291,16 @@ public interface AisLibrary extends Library{
    int AIS_OpenLock(Pointer p);
    
    
-   int device_type_enum2str(int devType, PointerByReference dev_type_str);       
    
-   int device_type_str2enum(String devTypeStr,IntByReference devType);
    
-   Pointer dl_status2str(int status);
+   
+   int device_type_enum2str(int devType, PointerByReference dev_type_str);          
+   int device_type_str2enum(String devTypeStr,IntByReference devType);   
+   Pointer dl_status2str(int status);   
+   long sys_get_timezone();
+   int sys_get_daylight();
+   long sys_get_dstbias();
+   
    
 }
    	   	   
