@@ -112,7 +112,7 @@ public enum E_ERROR_CODES{
                 this.value = value;
         }
         
-     public int getValue(){
+     public int value(){
             return value;
         }  	
  }

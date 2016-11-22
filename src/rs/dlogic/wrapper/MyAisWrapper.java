@@ -14,12 +14,15 @@ import java.lang.reflect.Array;
 import java.security.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Scanner;
+import java.util.TimeZone;
 
 import com.sun.jna.NativeLong;
 import com.sun.jna.Pointer;
+import com.sun.jna.ptr.ByteByReference;
 import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.ptr.LongByReference;
 import com.sun.jna.ptr.NativeLongByReference;
@@ -27,6 +30,7 @@ import com.sun.jna.ptr.PointerByReference;
 import com.sun.org.apache.xalan.internal.xsltc.compiler.Pattern;
 
 import rs.dlogic.wrapper.AisWrapper;
+import sun.security.util.Length;
 
 
 
@@ -62,7 +66,8 @@ public class MyAisWrapper extends AisWrapper {
     	libInstance = AisLibrary.aisReaders;
     }
 
-    S_DEVICE dev_hnd;        
+    
+    public static final String PASS = "1111";
     private List<String>myFormats = new ArrayList<String>();
     private ArrayList<Pointer>HND_LIST = new ArrayList<Pointer>();
 	private Scanner terminal;
@@ -75,7 +80,7 @@ public class MyAisWrapper extends AisWrapper {
 	   //format_grid
 	   myFormats.add(0, "---------------------------------------------------------------------------------------------------------------------" );
 	   myFormats.add(1, "| indx|  Reader HANDLE   | SerialNm | Type h/d | ID  | FW   | speed   | FTDI: sn   | opened | DevStatus | SysStatus |" );
-	   myFormats.add(2,"| %3d | %016X | %08d | %7d  | %2d  | %d  | %7d | %10s | %5d  | %8d  | %9d |\n");
+	   myFormats.add(2,"| %3d | %016X | %s | %7d  | %2d  | %d  | %7d | %10s | %5d  | %8d  | %9d |\n");
 	   
    }
    
@@ -99,10 +104,15 @@ public class MyAisWrapper extends AisWrapper {
 	  return myMeni;
    }
    
-   public void ActiveDevice(S_DEVICE dev, int index){
-	   dev.hnd = HND_LIST.get(index);		  		   		  
-	   dev.idx = HND_LIST.indexOf(dev.hnd) + 1;
-	   System.out.printf(" dev [%d] | hnd= 0x%X   " , dev.idx, dev.hnd.getInt(0));
+   public void ActiveDevice(S_DEVICE dev, int index)  {
+	try {
+		dev.hnd = HND_LIST.get(index);		  		   		  
+		dev.idx = HND_LIST.indexOf(dev.hnd) + 1;
+		System.out.printf(" dev [%d] | hnd= 0x%X \n  " , dev.idx, dev.hnd.getInt(0));
+	} catch (IndexOutOfBoundsException | NullPointerException e) {		
+		System.out.format("Exception: %s",e.toString());
+	}
+	   
    }
    
    public Boolean MeniLoop(){
@@ -111,10 +121,12 @@ public class MyAisWrapper extends AisWrapper {
 	   S_DEVICE dev = new S_DEVICE();	  
 	   int index = 0;
 	   if (Character.isDigit(mChar.trim().charAt(0))){		  
-		   index = Integer.parseInt(mChar)-1; 		  
-	   }	   
-	   ActiveDevice(dev, index);
-	   
+		   index = Integer.parseInt(mChar)-1;
+		   ActiveDevice(dev, index);
+	   }else{
+		   ActiveDevice(dev, 0); 
+	   }
+	   	   
 	   if (mChar.contains("x")){
 		   System.out.println("EXIT\n");
 		   return false;
@@ -139,17 +151,27 @@ public class MyAisWrapper extends AisWrapper {
 		case "t":
 			AisGetTime(dev);						
 			break;
+		case "T":
+			AisSetTime(dev);
+			break;
+		case "b": //Black_list read
+			AisBlackListRead(dev);
+			break;
+		case "w": //White list read
+			AisWhiteListRead(dev);
+			break;
 		}	   	  
 	  return true;
    }
    
    
-   String AisOpen(){
- 	   String out = "";
+   
+
+String AisOpen(){
+ 	   String out = "";  	    	  
  	   for (Pointer hnd : HND_LIST){		   		   		  
- 		   DL_STATUS = libInstance.AIS_Open(hnd);		   
- 		   out += String.format("AIS_Open(0x%X):{ %d(%s):%s}\n", hnd.getInt(0), DL_STATUS,
- 				                     Integer.toHexString(DL_STATUS), E_ERROR_CODES.DL_OK.getValue()); //TODO display the numerical value of DL_STATUS		   
+ 		   DL_STATUS = libInstance.AIS_Open(hnd); 		  
+ 		   out += String.format("AIS_Open(0x%X):%s\n", hnd.getInt(0), libInstance.dl_status2str(DL_STATUS).getString(0));		   
  	   }
  	   return out; 
     }
@@ -158,8 +180,8 @@ public class MyAisWrapper extends AisWrapper {
  	   String out = "";
  	   for (Pointer hnd : HND_LIST){
  		   DL_STATUS = libInstance.AIS_Close(hnd);		   
- 		   out += String.format("AIS_Close(0x%X):{ %d(%s):%s}\n", hnd.getInt(0), DL_STATUS,
- 				                     Integer.toHexString(DL_STATUS), E_ERROR_CODES.DL_OK.getValue()); //TODO display the numerical value of DL_STATUS		   
+ 		   out += String.format("AIS_Close(0x%X):%s\n", hnd.getInt(0), libInstance.dl_status2str(DL_STATUS).getString(0));
+ 				                       	   
  	   }
  	   return out;
     }
@@ -167,30 +189,61 @@ public class MyAisWrapper extends AisWrapper {
 
     void AisGetTime(S_DEVICE dev){
     	String fOut;    	    	
-    	RetValues rv;     	    	
+    	RetValues rv;     	
     	rv = AISGetTime(dev.hnd);    	    	    
-    	fOut = String.format("AIS_GetTime(dev[%d] hnd=0x%X)> (currentTime= %d | tz= %d | dst= %d | offset= %d): %s\n",
-    			               dev.idx, dev.hnd.getInt(0), rv.currentTime, rv.timezone, rv.DST, rv.offset,
+    	fOut = String.format("AIS_GetTime(dev[%d] hnd=0x%X):%s > (currentTime= %d | tz= %d | dst= %d | offset= %d): %s\n",
+    			              dev.idx, dev.hnd.getInt(0), libInstance.dl_status2str(rv.dl_status).getString(0), rv.currentTime, rv.timezone, rv.DST, rv.offset,
     			               new Date(new Date(rv.currentTime).getTime()) );    	    	   
     	System.out.println(fOut);    	    
     }
     
-    int AISSetTime(){
-    	Pointer device;
-		byte[] str_password = new byte[9]; 
-		NativeLong time_to_set;
-		long timezone = libInstance.sys_get_timezone();
-		int DST = libInstance.sys_get_daylight();
-		long offset	= libInstance.sys_get_dstbias();
-		return 0;
+  
+    void AisSetTime(S_DEVICE dev){
+    	String fOut;    	    	
+    	RetValues rv;     	
+    	rv = AISSetTime(dev.hnd, PASS);    	    	    
+    	fOut = String.format("\nAIS_SetTime(dev[%d] hnd=0x%X) %s > (currentTime= %d | tz= %d | dst= %d | offset= %d): %s\n",
+    			               dev.idx, dev.hnd.getInt(0), libInstance.dl_status2str(rv.dl_status).getString(0), rv.currentTime, rv.timezone, rv.DST, rv.offset,
+    			               new Date(new Date(rv.currentTime).getTime()) );    	    	   
+    	System.out.println(fOut); 
     }
    
+    
+    
+    void AisBlackListRead(S_DEVICE dev){
+    	String fOut;    	    	
+    	RetValues rv;    	
+    	rv = AISBlackListRead(dev, PASS);    	
+    	fOut = String.format("\nAIS_Blacklist_Read() > black_list(size= %d | %s) > %s\n" ,
+    			             rv.listSize, rv.strList, libInstance.dl_status2str(rv.dl_status).getString(0) );
+    	System.out.println(fOut);
+    }
    
+    private void AisWhiteListRead(S_DEVICE dev) 
+    {
+    	String fOut;    	    	
+    	RetValues rv;    	
+    	rv = AISWhiteListRead(dev, PASS);    	
+    	fOut = String.format("\nAIS_Whitelist_Read() > white_list(size= %d | %s) > %s\n" ,
+    			             rv.listSize, rv.strList, libInstance.dl_status2str(rv.dl_status).getString(0) );
+    	System.out.println(fOut);
+ 	
+    }
+    
+    
+    
+    
+    
+    
     void listDevices(){    	
     	prepareListForCheck();
     	System.out.println("checking...please wait...");
     	int devCount = AISListUpdateAndGetCount();    	    
-    	System.out.printf("AIS_List_UpdateAndGetCount()= [%d]\n", devCount);    	    	
+    	System.out.printf("AIS_List_UpdateAndGetCount()= [%d]\n", devCount); 
+    	if (devCount >0){
+    		AISGetListInformation();
+    	}else
+    		System.out.println("NO DEVICE FOUND!");
     }
     
     
@@ -332,7 +385,8 @@ public class MyAisWrapper extends AisWrapper {
 	    		AisOpen();
 	    		dev.idx = 1;
 	    		dev.hnd = hnd.getValue(); 
-	            dev.devSerial = Integer.parseInt(devSerial.getValue().getString(0)); 
+	            //dev.devSerial = Integer.parseInt(devSerial.getValue().getString(0)); 
+	            dev.devSerial = devSerial.getValue().getString(0); 
 	            dev.devType = devType.getValue();
 	            dev.devID = devID.getValue();
 	            dev.devFW_VER = devFW_VER.getValue();
@@ -372,7 +426,7 @@ public class MyAisWrapper extends AisWrapper {
     void init(){
     	MyFormats();
     	listDevices();    	
-    	AISGetListInformation();
+    	
     	System.out.println(ShowMeni());
     }
     
@@ -380,8 +434,8 @@ public class MyAisWrapper extends AisWrapper {
 	public static void main(String[] args) {			   	  	 
        MyAisWrapper init = new MyAisWrapper();       
        System.out.println(init.AISGetLibraryVersionStr());
-       init.init();
-       while (true) 
+       init.init();          	  
+   	   while (true) 
        {
     	   if (!init.MeniLoop()){
     		   break;    		   

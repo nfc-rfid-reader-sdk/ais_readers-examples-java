@@ -20,6 +20,7 @@ import com.sun.org.apache.bcel.internal.generic.RET;
 import rs.dlogic.wrapper.AisWrapper.AisLibrary;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.Map;
@@ -32,7 +33,7 @@ import java.util.Map;
 class S_DEVICE{
 	int idx;
 	Pointer hnd;
-	int devSerial;
+	String devSerial;
 	int devType;
 	int devID;
 	int devFW_VER;
@@ -45,10 +46,13 @@ class S_DEVICE{
 
 class RetValues{	
 	public long currentTime;
-    public int timezone;
+    public long timezone;
 	public int DST;
-	public int offset;
+	public long offset;
 	public int dl_status;
+	//BW list
+	public int listSize = 0;
+	public String strList = null;
 }
 
 
@@ -108,8 +112,61 @@ public class AisWrapper {
        return rv;    			    		    
     }
     
+    public RetValues AISSetTime(Pointer devHnd, String pass){
+    	int DL_STATUS;
+    	RetValues rv = new RetValues();     	    	
+    	long currentTime = new Date().getTime();     	
+    	long timezone = libInstance.sys_get_timezone();
+    	int DST = libInstance.sys_get_daylight();
+    	long offset = libInstance.sys_get_dstbias();
+    	byte[]PASS = pass.getBytes(); 
+    	DL_STATUS = libInstance.AIS_SetTime(devHnd, 
+    			                            PASS,
+    			                            new NativeLong(currentTime / 1000),    			                           
+    			                            timezone, 
+    			                            DST, 
+    			                            offset);    	    			    	    	   	
+	   rv.currentTime = currentTime;
+	   rv.DST = DST;
+	   rv.offset = offset;
+	   rv.timezone = timezone;
+	   rv.dl_status = DL_STATUS;
+       return rv;    	
+    }
+    public RetValues AISBlackListRead(S_DEVICE dev, String pass){
+    	PointerByReference blackList = new PointerByReference();
+    	RetValues rv = new RetValues();    	
+    	String listSize = null;
+    	byte[] PASS = pass.getBytes();
+    	dev.devStatus = libInstance.AIS_Blacklist_Read(dev.hnd, PASS, blackList);
+    	if (dev.devStatus == E_ERROR_CODES.DL_OK.value()){
+    		listSize = blackList.getValue().getString(0);    		
+    	}else {listSize = "";}
+    	rv.listSize = listSize.length();
+    	if (blackList.getValue() == null){rv.strList="None";}
+    	else
+    	   rv.strList =  blackList.getValue().getString(0);
+  	    rv.dl_status = dev.devStatus;
+        return rv;   
+    }
     
-    
+    public RetValues AISWhiteListRead(S_DEVICE dev, String pass){
+    	PointerByReference whiteList = new PointerByReference();
+    	RetValues rv = new RetValues();    	
+    	String listSize = "";
+    	byte[] PASS = pass.getBytes();
+    	dev.devStatus = libInstance.AIS_Whitelist_Read(dev.hnd, PASS, whiteList);    
+    	if (dev.devStatus == E_ERROR_CODES.DL_OK.value()){
+    		listSize = whiteList.getValue().getString(0);    		
+    	}else {listSize = "";}
+    	rv.listSize = listSize.length();
+    	if (whiteList.getValue() == null){rv.strList="None";}
+    	else
+    	   rv.strList =  whiteList.getValue().getString(0);
+  	    rv.dl_status = dev.devStatus;
+        return rv;   
+    }
+ //*********************************************************************************   
 		
 static String sPlatform;
 static public String GetLibFullPath() {
@@ -230,11 +287,11 @@ public interface AisLibrary extends Library{
    				);
    
    int AIS_SetTime(Pointer device, 
-			byte[] str_password, 
-			NativeLong time_to_set,
-			int timezone,
+			byte[] str_password, 			
+			NativeLong timeToSet,
+			long timezone,
 			int DST,
-			int offset);
+			long offset);
    
    int AIS_GetTime(Pointer device,
    		LongByReference current_time,
@@ -266,8 +323,15 @@ public interface AisLibrary extends Library{
    
    int AIS_Blacklist_Read(Pointer device,   		             
    		             byte[] password,   		             
-   		             ByteByReference csv_blacklist 
+   		             PointerByReference str_blacklist 
    		             );
+   
+   int AIS_Whitelist_Read(Pointer device,
+		                  byte[] password,   		             
+	                      PointerByReference str_whitelist
+	                     );
+   
+   
    
    int AIS_Blacklist_Write(Pointer device,
    		              byte[] password, 
@@ -297,9 +361,11 @@ public interface AisLibrary extends Library{
    int device_type_enum2str(int devType, PointerByReference dev_type_str);          
    int device_type_str2enum(String devTypeStr,IntByReference devType);   
    Pointer dl_status2str(int status);   
+   
    long sys_get_timezone();
    int sys_get_daylight();
    long sys_get_dstbias();
+   
    
    
 }
