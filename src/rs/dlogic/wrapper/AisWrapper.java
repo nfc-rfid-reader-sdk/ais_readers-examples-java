@@ -133,6 +133,29 @@ public class AisWrapper {
 	   rv.dl_status = DL_STATUS;
        return rv;    	
     }
+    
+    public RetValues AISBlackListWrite(S_DEVICE dev, String pass, String blackList){
+    	RetValues rv = new RetValues();    	
+    	String listSize = "";
+    	byte[] PASS = pass.getBytes();
+    	byte[] bBlackList = blackList.getBytes();
+    	dev.devStatus = libInstance.AIS_Blacklist_Write(dev.hnd, PASS, bBlackList);      	
+    	rv.strList = blackList;
+    	rv.dl_status = dev.devStatus;
+    	return rv;
+    }
+    
+    public RetValues AISWhiteListWrite(S_DEVICE dev, String pass, String whiteList){
+    	RetValues rv = new RetValues();    	
+    	String listSize = "";
+    	byte[] PASS = pass.getBytes();
+    	byte[] bWhiteList = whiteList.getBytes();
+    	dev.devStatus = libInstance.AIS_Whitelist_Write(dev.hnd, PASS, bWhiteList);      	
+    	rv.strList = whiteList;
+    	rv.dl_status = dev.devStatus;
+    	return rv;
+    }
+    
     public RetValues AISBlackListRead(S_DEVICE dev, String pass){
     	PointerByReference blackList = new PointerByReference();
     	RetValues rv = new RetValues();    	
@@ -143,7 +166,7 @@ public class AisWrapper {
     		listSize = blackList.getValue().getString(0);    		
     	}else {listSize = "";}
     	rv.listSize = listSize.length();
-    	if (blackList.getValue() == null){rv.strList="None";}
+    	if (blackList.getValue() == null){rv.strList="No Black list";}
     	else
     	   rv.strList =  blackList.getValue().getString(0);
   	    rv.dl_status = dev.devStatus;
@@ -160,14 +183,29 @@ public class AisWrapper {
     		listSize = whiteList.getValue().getString(0);    		
     	}else {listSize = "";}
     	rv.listSize = listSize.length();
-    	if (whiteList.getValue() == null){rv.strList="None";}
+    	if (whiteList.getValue() == null){rv.strList="No White list";}
     	else
     	   rv.strList =  whiteList.getValue().getString(0);
   	    rv.dl_status = dev.devStatus;
         return rv;   
     }
+    
+    public RetValues AISTestLights(S_DEVICE dev, int greenMaster, int redMaster, int greenSlave, int redSlave){
+    	RetValues rv = new RetValues();     	  	 
+   	    dev.devStatus = libInstance.AIS_LightControl(dev.hnd, greenMaster, redMaster, greenSlave, redSlave);   	    		                        	   
+   	    rv.dl_status = dev.devStatus;    	    	
+   	    return rv;
+    }
+    
+    
+    
+    
+    
+    
+    
+    
  //*********************************************************************************   
-		
+	
 static String sPlatform;
 static public String GetLibFullPath() {
 
@@ -331,11 +369,14 @@ public interface AisLibrary extends Library{
 	                      PointerByReference str_whitelist
 	                     );
    
-   
-   
+      
    int AIS_Blacklist_Write(Pointer device,
    		              byte[] password, 
    		              byte[] csv_blacklist);
+   
+   int AIS_Whitelist_Write(Pointer device,
+		   				   byte[] password, 
+		   				   byte[] csv_whitelist);
    
    int AIS_BatteryGetInfo(Pointer device, 
    		               IntByReference battery_status, 
@@ -351,6 +392,11 @@ public interface AisLibrary extends Library{
    
    Pointer AIS_List_GetDevicesForCheck();	
    
+   int AIS_LightControl(Pointer device, 
+		   				int green_master,
+		   				int red_master,
+		   				int green_slave,
+		   				int red_slave);
    
    int AIS_OpenLock(Pointer p);
    

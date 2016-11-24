@@ -16,7 +16,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Scanner;
 import java.util.TimeZone;
 
@@ -44,7 +46,7 @@ import sun.security.util.Length;
 
 public class MyAisWrapper extends AisWrapper {	
 	
-	
+		
 	int DL_STATUS;	
     static AisLibrary libInstance;
     
@@ -70,9 +72,9 @@ public class MyAisWrapper extends AisWrapper {
     public static final String PASS = "1111";
     private List<String>myFormats = new ArrayList<String>();
     private ArrayList<Pointer>HND_LIST = new ArrayList<Pointer>();
-	private Scanner terminal;
-    
-   
+	private static Scanner terminal;
+	private Map<String, Boolean> Lights = new HashMap<>();
+	S_DEVICE dev = new S_DEVICE();	
     //***************************************************************************
    
     
@@ -115,10 +117,9 @@ public class MyAisWrapper extends AisWrapper {
 	   
    }
    
-   public Boolean MeniLoop(){
+   public Boolean MeniLoop(){		   
 	   terminal = new Scanner(System.in);	   
-	   String mChar = terminal.nextLine();
-	   S_DEVICE dev = new S_DEVICE();	  
+	   String mChar = terminal.nextLine();	 	 
 	   int index = 0;
 	   if (Character.isDigit(mChar.trim().charAt(0))){		  
 		   index = Integer.parseInt(mChar)-1;
@@ -128,7 +129,8 @@ public class MyAisWrapper extends AisWrapper {
 	   }
 	   	   
 	   if (mChar.contains("x")){
-		   System.out.println("EXIT\n");
+		   System.out.println("APP EXIT\n");
+		   terminal.close();
 		   return false;
 	   }	   
 	   switch (mChar) 
@@ -157,8 +159,20 @@ public class MyAisWrapper extends AisWrapper {
 		case "b": //Black_list read
 			AisBlackListRead(dev);
 			break;
+		case "B":
+			AisBlackListWrite(dev);
+			break;
 		case "w": //White list read
 			AisWhiteListRead(dev);
+			break;
+		case "W":
+			AisWhiteListWrite(dev);
+			break;
+		case "L":
+			AisTestLights(dev);
+			break;
+		case "Q": //Edit device list for checking
+			AisEditDeviceListForChecking(dev);
 			break;
 		}	   	  
 	  return true;
@@ -167,7 +181,7 @@ public class MyAisWrapper extends AisWrapper {
    
    
 
-String AisOpen(){
+    String AisOpen(){
  	   String out = "";  	    	  
  	   for (Pointer hnd : HND_LIST){		   		   		  
  		   DL_STATUS = libInstance.AIS_Open(hnd); 		  
@@ -180,8 +194,7 @@ String AisOpen(){
  	   String out = "";
  	   for (Pointer hnd : HND_LIST){
  		   DL_STATUS = libInstance.AIS_Close(hnd);		   
- 		   out += String.format("AIS_Close(0x%X):%s\n", hnd.getInt(0), libInstance.dl_status2str(DL_STATUS).getString(0));
- 				                       	   
+ 		   out += String.format("AIS_Close(0x%X):%s\n", hnd.getInt(0), libInstance.dl_status2str(DL_STATUS).getString(0)); 				                       	  
  	   }
  	   return out;
     }
@@ -219,23 +232,132 @@ String AisOpen(){
     	System.out.println(fOut);
     }
    
-    private void AisWhiteListRead(S_DEVICE dev) 
+    
+    void AisBlackListWrite(S_DEVICE dev){
+    	String fOut;    	    	
+    	RetValues rv;
+    	Scanner inputBL = new Scanner(System.in);
+    	String sBuffer =  "=- Write Black List -=\n"
+    					+ "Try to write black-list decimal numbers (delimited with anything)\n"
+    			        + "eg. 2, 102 250;11\n";
+    	System.out.print(sBuffer + "\nEnter black list:");    	    	   
+    	rv = AISBlackListWrite(dev, PASS, inputBL.nextLine());
+    	fOut = String.format("\nAIS_Blacklist_Write():black_list= %s > %s\n" , rv.strList, libInstance.dl_status2str(rv.dl_status).getString(0));
+        System.out.println(fOut);    
+    }
+    
+  
+    void AisWhiteListRead(S_DEVICE dev) 
     {
     	String fOut;    	    	
     	RetValues rv;    	
     	rv = AISWhiteListRead(dev, PASS);    	
     	fOut = String.format("\nAIS_Whitelist_Read() > white_list(size= %d | %s) > %s\n" ,
     			             rv.listSize, rv.strList, libInstance.dl_status2str(rv.dl_status).getString(0) );
-    	System.out.println(fOut);
- 	
+    	System.out.println(fOut); 	
+    }
+    
+    void AisWhiteListWrite(S_DEVICE dev){
+    	String fOut;    	    	
+    	RetValues rv;
+    	Scanner inputBL = new Scanner(System.in);
+    	String sBuffer =  "=- Write White List -=\n"
+    					+ "Enter white-list UIDs (in HEX format delimited with '.' or ':' or not)\n"
+    			        + "Each UID separate by ',' or space eg. 37:0C:96:69,C2.66.EF.95 01234567\n";
+    	System.out.print(sBuffer + "\nEnter white list:");    	    	   
+    	rv = AISWhiteListWrite(dev, PASS, inputBL.nextLine());
+    	fOut = String.format("\nAIS_Whitelist_Write():white_list= %s > %s\n" , rv.strList, libInstance.dl_status2str(rv.dl_status).getString(0));
+        System.out.println(fOut);    
+    }
+     
+    
+    private void CleanMapLights(){    	
+   	    Lights.put("green_master", false);
+   	    Lights.put("red_master", false);
+   	    Lights.put("green_slave", false);
+   	    Lights.put("red_slave", false);     	  
     }
     
     
     
+	void AisTestLights(S_DEVICE dev){
+    	String lightMeni = "\tg : green master | r : red master | G : green slave | R : red slave  || x : exit \n"
+    			         + "\t-----------------";
+    	System.out.println(lightMeni); 
+    	RetValues rv;
+    	String fOut;
+    	//String choise;
+    	Scanner s;    	    	 	       	   
+   	    Boolean print = false;   	   
+   	    CleanMapLights();
+    	while (true){
+    		 s = new Scanner(System.in);    		 
+    		 String choise = s.nextLine();    		     		     		 
+    		 if (choise.contains("g")){    			 
+    			 Lights.replace("green_master", true);
+    			 print = true;    			 
+    			}
+    		 if (choise.contains("r")){    			 
+    			 Lights.replace("red_master", true);
+    			 print = true;   			 
+    		 }
+    		 if (choise.contains("G")){    			 
+    			 Lights.replace("green_slave", true);
+    			 print = true;     			 }
+    		 if (choise.contains("R")){
+    			 Lights.replace("red_slave", true);
+    			 print = true;     			 }
+    		 if (choise.contains("x")) {
+    			 break;    			    			    		
+    			 } 
+    		
+    		 if (print){    			 
+    			int greenMaster = Lights.get("green_master") ? 1:0;
+    			int redMaster = Lights.get("red_master") ? 1:0;
+    			int greenSlave = Lights.get("green_slave") ? 1:0;
+    			int redSlave = Lights.get("red_slave") ? 1:0;
+    			rv = AISTestLights(dev, greenMaster, redMaster, greenSlave, redSlave);
+    			fOut = String.format("\nAIS_LightControl(master:green= %d | master:red= %d || slave:green= %d | slave:sred= %d) > %s\n", 
+    					              greenMaster, redMaster, greenSlave, redSlave, libInstance.dl_status2str(rv.dl_status).getString(0));
+    			System.out.println(fOut);
+    			CleanMapLights();
+    			print = false;
+    		}    			
+    	} 
+    	s.close();
+    	System.out.println("exit");    	   
+   }
     
-    
-    
-    void listDevices(){    	
+
+	void AisEditDeviceListForChecking(S_DEVICE dev){
+		Scanner scan;
+		String meni = "\n\t1 : show known device types"
+                    + "\n\t2 : show actual list for checking" 
+                    + "\n\t3 : clear list for checking"
+                    + "\n\t4 : add device for check"
+                    + "\n\t5 : erase device from checking list"
+                    + "\n\t------------------------------------"
+                    + "\n\tm : print meni"
+                    + "\n\tx : Exit";
+		
+		System.out.println(meni);
+		
+		while (true){
+			scan = new Scanner(System.in);
+			String choise = scan.nextLine();
+			if (choise.contains("x")){break;}
+			if (choise.contains("1")){
+				
+			}
+			scan.close();
+		}
+		
+		
+	}
+
+   
+ //************************************************************************
+	void listDevices(){    	
     	prepareListForCheck();
     	System.out.println("checking...please wait...");
     	int devCount = AISListUpdateAndGetCount();    	    
