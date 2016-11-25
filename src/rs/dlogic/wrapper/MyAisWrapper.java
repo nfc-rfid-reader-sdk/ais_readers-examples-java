@@ -172,7 +172,7 @@ public class MyAisWrapper extends AisWrapper {
 			AisTestLights(dev);
 			break;
 		case "Q": //Edit device list for checking
-			AisEditDeviceListForChecking(dev);
+			AisEditDeviceListForChecking();
 			break;
 		}	   	  
 	  return true;
@@ -280,18 +280,19 @@ public class MyAisWrapper extends AisWrapper {
     
     
     
+	@SuppressWarnings("resource")
 	void AisTestLights(S_DEVICE dev){
     	String lightMeni = "\tg : green master | r : red master | G : green slave | R : red slave  || x : exit \n"
     			         + "\t-----------------";
     	System.out.println(lightMeni); 
     	RetValues rv;
-    	String fOut;
-    	//String choise;
-    	Scanner s;    	    	 	       	   
+    	String fOut;    	
+    	Scanner s;
+    	s = new Scanner(System.in);
    	    Boolean print = false;   	   
-   	    CleanMapLights();
+   	    CleanMapLights();   	    
     	while (true){
-    		 s = new Scanner(System.in);    		 
+    		     		 
     		 String choise = s.nextLine();    		     		     		 
     		 if (choise.contains("g")){    			 
     			 Lights.replace("green_master", true);
@@ -323,14 +324,134 @@ public class MyAisWrapper extends AisWrapper {
     			CleanMapLights();
     			print = false;
     		}    			
-    	} 
-    	s.close();
-    	System.out.println("exit");    	   
+    	}     	   	   
    }
-    
 
-	void AisEditDeviceListForChecking(S_DEVICE dev){
-		Scanner scan;
+	
+	
+//Q - EditDeviceListForChecking
+	String PrintAvailableDevices(){		
+		PointerByReference devName =  new PointerByReference();
+		PointerByReference devDescript = new PointerByReference();
+		IntByReference hwType = new IntByReference(0);
+		IntByReference speed = new IntByReference(0); 
+        IntByReference rteTest = new IntByReference(0);
+        IntByReference isHalfDuplex = new IntByReference(0);
+        IntByReference isAloneOnTheBus = new IntByReference(0);
+                
+		int status;
+		int maxDev = E_KNOWN_DEVICE_TYPES.DL_AIS_SYSTEM_TYPES_COUNT.value();
+		String grid_0 = "-------------------------------------------------------------------\n",
+			   grid_1 = "------------+-----------------+------------------------------------\n";	
+		
+	    String header = grid_0 + "Look at ais_readers_list.h for Device enumeration\n"
+	                   + String.format("Known devices ( supported by %s )\n", AISGetLibraryVersionStr())
+	                   + grid_0 + " Dev.type   |   Short  name   | Long name\n"
+	                   + grid_1;
+	    
+	    String print = "";
+	    System.out.println(header);
+	    
+	    for (int i = 1;i<maxDev;i++){
+	    	status = libInstance.dbg_device_type(i, devName, devDescript,
+	    			  hwType, speed, rteTest, isHalfDuplex, isAloneOnTheBus);
+	    
+	        if (status != 0){
+	        	System.out.printf("NOT SUPORTED! \n");
+	        	break;
+	        }else {	        	
+	        	print += String.format("\t %2d | %15s | %s\n", i, devName.getValue().getString(0),
+	        													devDescript.getValue().getString(0)); 	        		  		        	
+	        }	        	  
+	    }
+	    return 
+	    		print + grid_0;
+	
+	}
+    
+	String ShowActualList(){
+		PointerByReference devName =  new PointerByReference();
+		PointerByReference devDescript = new PointerByReference();
+		IntByReference hwType = new IntByReference(0);
+		IntByReference speed = new IntByReference(0); 
+        IntByReference rteTest = new IntByReference(0);
+        IntByReference isHalfDuplex = new IntByReference(0);
+        IntByReference isAloneOnTheBus = new IntByReference(0);
+        int status;
+		
+        String grid_0 = "-------------------------------------------------------------------\n",
+			   grid_1 = "------------+------+--------------------+--------------------------\n";
+				
+		String header = "Show actual list for checking:\n"
+				      + grid_0
+				      + " Dev.type   |  ID  |      Short  name   | Long name\n"
+				      + grid_1;
+	   
+		String print = "";
+		String getDev = AISGetDevicesForCheck();
+	    System.out.println(header);
+	    
+		for (String item : getDev.split("\n")){	    	 
+	    	 String[] devTypes = item.split(":");
+	    	 int devType = Integer.parseInt(devTypes[0]);
+	    	 status = libInstance.dbg_device_type(devType, 
+	    			            devName, devDescript, hwType, speed, 
+	    			            rteTest, isHalfDuplex, isAloneOnTheBus);
+	    	 print += String.format("\t%2s  | \t%2s | %18s | %s\n", devTypes[0],
+	    			               devTypes[1], devName.getValue().getString(0),
+	    			               devDescript.getValue().getString(0));
+	    			 	    		   	 	    	
+	    }
+	    
+		return  
+				print + grid_1;     
+	}
+
+	@SuppressWarnings("resource")
+	int [] DevInput(){		
+		int maxDev = E_KNOWN_DEVICE_TYPES.DL_AIS_SYSTEM_TYPES_COUNT.value();
+		System.out.println("Enter device type and then enter device BUS ID for check");
+		int[]devInput = new int[2];
+		Scanner in;	
+		in = new Scanner(System.in);
+		while (true){			
+			System.out.printf("Enter device type (1,2, ... , %d)('x' for exit !)   : " , maxDev-1);
+			String scan = in.next();
+			if (scan.contains("x")){
+				devInput[0] = 0; //deviceType				
+				break;
+			}			
+			System.out.print("Enter device bus ID (if full duplex then enter 0)   :  ");
+			devInput[0] = Integer.parseInt(scan);
+			devInput[1] = in.nextInt(); //deviceID			
+			System.out.print("\nAgain (Y/N) ?");			
+			scan = in.next();
+			if (scan.contains("N") || scan.contains("n")){break;}
+		}				
+		return devInput;		
+	}
+	
+	String ShowResult(String funName,int devType, int devId){
+		int status = 0;
+		switch (funName){
+		case "AIS_List_AddDeviceForCheck()":
+			status = libInstance.AIS_List_AddDeviceForCheck(devType, devId);
+			break;
+		case "AIS_List_EraseDeviceForCheck()":
+			status = libInstance.AIS_List_EraseDeviceForCheck(devType, devId);
+			break;
+		}
+		String fOut = String.format("%s(type: %d, id: %d)> %s \n" , funName,
+				                    devType, devId, libInstance.dl_status2str(status).getString(0))
+				      + "Finish list edit.\n" 
+				      + String.format("AFTER UPDATE CYCLE \n%s", AISGetDevicesForCheck());
+		return fOut;
+	}
+	
+	@SuppressWarnings("resource")
+	void AisEditDeviceListForChecking(){
+		Scanner scan;		
+		int deviceType,deviceID;
 		String meni = "\n\t1 : show known device types"
                     + "\n\t2 : show actual list for checking" 
                     + "\n\t3 : clear list for checking"
@@ -341,18 +462,28 @@ public class MyAisWrapper extends AisWrapper {
                     + "\n\tx : Exit";
 		
 		System.out.println(meni);
-		
-		while (true){
-			scan = new Scanner(System.in);
+		scan = new Scanner(System.in);
+		while (true){			
 			String choise = scan.nextLine();
 			if (choise.contains("x")){break;}
-			if (choise.contains("1")){
-				
+			if (choise.contains("m")){System.out.println(meni);}
+			if (choise.contains("1")){System.out.println(PrintAvailableDevices());};				
+			if (choise.contains("2")){System.out.println(ShowActualList());}
+			if (choise.contains("3")){				
+				AISListEraseAllDeviceForCheck();
+				System.out.println("Clear list for checking !");
 			}
-			scan.close();
-		}
-		
-		
+			if (choise.contains("4")){					
+				deviceType = DevInput()[0];
+				deviceID = DevInput()[1];
+				System.out.println(ShowResult("AIS_List_AddDeviceForCheck()", deviceType, deviceID));				
+			}
+			if (choise.contains("5")){					
+				deviceType = DevInput()[0];
+				deviceID = DevInput()[1];
+				System.out.println(ShowResult("AIS_List_EraseDeviceForCheck()", deviceType, deviceID));				
+			}	
+		}				
 	}
 
    
@@ -435,7 +566,7 @@ public class MyAisWrapper extends AisWrapper {
     	AISListEraseAllDeviceForCheck();
     	if (!loadListFromFile()){
     		System.out.println("Tester try to connect with a Base HD device on any/unkown ID");
-    	    addDevice(E_KNOWN_DEVICE_TYPES.DL_AIS_BASE_HD_SDK.getDeviceTypes(),0);
+    	    addDevice(E_KNOWN_DEVICE_TYPES.DL_AIS_BASE_HD_SDK.value(),0);
     	
     	}
     	System.out.println("AIS_List_GetDevicesForCheck() AFTER LIST UPDATE");

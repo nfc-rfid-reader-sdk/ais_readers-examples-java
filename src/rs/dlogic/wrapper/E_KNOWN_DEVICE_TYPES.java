@@ -15,12 +15,12 @@ public enum E_KNOWN_DEVICE_TYPES {
 	DL_AIS_BASE_HD_SDK (11),
 	DL_AIS_SYSTEM_TYPES_COUNT (12);
 	
-	private int devTypeValue;
+	private int value;
 	private E_KNOWN_DEVICE_TYPES(int value){
-		this.devTypeValue = value;
+		this.value = value;
 	}		
-	public int getDeviceTypes(){
-		return devTypeValue;
+	public int value(){
+		return value;
 	}
 	
 }

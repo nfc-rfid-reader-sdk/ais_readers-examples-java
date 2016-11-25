@@ -411,6 +411,11 @@ public interface AisLibrary extends Library{
    long sys_get_timezone();
    int sys_get_daylight();
    long sys_get_dstbias();
+   int dbg_device_type (int devType, PointerByReference devName,
+		                PointerByReference devDescription, 
+		                IntByReference hwType, IntByReference speed, 
+		                IntByReference rteTest, IntByReference isHalfDuplex,
+		                IntByReference isAloneOnTheBus);
    
    
    
