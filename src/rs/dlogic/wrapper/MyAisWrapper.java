@@ -12,6 +12,10 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Array;
 import java.security.Timestamp;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.time.format.DateTimeFormatter;
+import java.time.format.FormatStyle;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -110,7 +114,8 @@ public class MyAisWrapper extends AisWrapper {
 	try {
 		dev.hnd = HND_LIST.get(index);		  		   		  
 		dev.idx = HND_LIST.indexOf(dev.hnd) + 1;
-		System.out.printf(" dev [%d] | hnd= 0x%X \n  " , dev.idx, dev.hnd.getInt(0));
+		System.out.printf(" dev [%d] | hnd= 0x%X \n  " , dev.idx, dev.hnd.getInt(0));		
+		
 	} catch (IndexOutOfBoundsException | NullPointerException e) {		
 		System.out.format("Exception: %s",e.toString());
 	}
@@ -174,13 +179,40 @@ public class MyAisWrapper extends AisWrapper {
 		case "Q": //Edit device list for checking
 			AisEditDeviceListForChecking();
 			break;
+		case "s" :
+			AisConfigFileRead(dev);
+			break;
 		}	   	  
 	  return true;
    }
    
-   
-   
-
+    @SuppressWarnings("resource")
+    void AisConfigFileRead(S_DEVICE dev){
+    	RetValues rv;
+    	SimpleDateFormat formatter = new SimpleDateFormat("yyyyMMdd_hhmmss");
+    	String localTime = formatter.format(new Date()).toString();     	
+    	String fileName = String.format("BaseHD-%s-ID%d-%s", dev.devSerial, dev.devID, localTime);    	
+    	String fName="";
+    	String print = "Read configuration from the device - to the file"
+    			     + String.format("\nConfig file - enter for default [%s] : ",fileName);
+    	System.out.println(print);    	
+		Scanner scan = new Scanner(System.in);
+    	String sscan = scan.nextLine();    	
+    	if (sscan.length()!= 0){    		
+    		fName = sscan.trim();
+    	}else {
+    		fName = fileName;
+    	}
+    	fileName = "";
+    	fileName = fName + ".config";    	
+    	System.out.printf("AIS_Config_Read(file: %s)\n", fileName);    	
+    	rv = AISConfigFileRead(dev, fileName, PASS);
+    	System.out.printf("AIS_Config_Read():%s", libInstance.dl_status2str(rv.dl_status).getString(0));
+        
+    }
+    
+    
+    
     String AisOpen(){
  	   String out = "";  	    	  
  	   for (Pointer hnd : HND_LIST){		   		   		  
@@ -407,7 +439,7 @@ public class MyAisWrapper extends AisWrapper {
 				print + grid_1;     
 	}
 
-	@SuppressWarnings("resource")
+	
 	int [] DevInput(){		
 		int maxDev = E_KNOWN_DEVICE_TYPES.DL_AIS_SYSTEM_TYPES_COUNT.value();
 		System.out.println("Enter device type and then enter device BUS ID for check");
@@ -423,11 +455,13 @@ public class MyAisWrapper extends AisWrapper {
 			}			
 			System.out.print("Enter device bus ID (if full duplex then enter 0)   :  ");
 			devInput[0] = Integer.parseInt(scan);
-			devInput[1] = in.nextInt(); //deviceID			
+			devInput[1] = in.nextInt(); //deviceID	
+			
 			System.out.print("\nAgain (Y/N) ?");			
 			scan = in.next();
 			if (scan.contains("N") || scan.contains("n")){break;}
-		}				
+		}
+		in.close();
 		return devInput;		
 	}
 	
@@ -607,7 +641,8 @@ public class MyAisWrapper extends AisWrapper {
     	else
     	{    		
 	    	HND_LIST.clear();
-	    	S_DEVICE dev = new S_DEVICE();    	    	
+	    	//S_DEVICE dev = new S_DEVICE();
+	    	
 	    	for (int i = 0;i<devCount;i++)
 	    	{
 	    		/*
@@ -639,7 +674,7 @@ public class MyAisWrapper extends AisWrapper {
 	    		dev.idx = 1;
 	    		dev.hnd = hnd.getValue(); 
 	            //dev.devSerial = Integer.parseInt(devSerial.getValue().getString(0)); 
-	            dev.devSerial = devSerial.getValue().getString(0); 
+	            dev.devSerial = devSerial.getValue().getString(0); 	            	            	            	            	            	            	            
 	            dev.devType = devType.getValue();
 	            dev.devID = devID.getValue();
 	            dev.devFW_VER = devFW_VER.getValue();

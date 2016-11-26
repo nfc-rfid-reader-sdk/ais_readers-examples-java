@@ -134,6 +134,15 @@ public class AisWrapper {
        return rv;    	
     }
     
+    public RetValues AISConfigFileRead(S_DEVICE dev,String fileName, String pass){
+    	RetValues rv = new RetValues();
+    	byte[]passw = pass.getBytes();
+    	byte[]configFile = fileName.getBytes();
+    	dev.devStatus = libInstance.AIS_Config_Read(dev.hnd, passw, configFile);    	   	    
+    	rv.dl_status = dev.devStatus;
+    	return rv;
+    }
+    
     public RetValues AISBlackListWrite(S_DEVICE dev, String pass, String blackList){
     	RetValues rv = new RetValues();    	
     	String listSize = "";
@@ -399,6 +408,10 @@ public interface AisLibrary extends Library{
 		   				int red_slave);
    
    int AIS_OpenLock(Pointer p);
+   
+   int AIS_Config_Read(Pointer device,
+		              byte[] password,
+		              byte[] config_bin_filename);
    
    
    
