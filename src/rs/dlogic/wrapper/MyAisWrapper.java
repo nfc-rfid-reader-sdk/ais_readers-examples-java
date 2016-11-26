@@ -182,6 +182,15 @@ public class MyAisWrapper extends AisWrapper {
 		case "s" :
 			AisConfigFileRead(dev);
 			break;
+		case "g":
+			AisGetIOState(dev);
+			break;
+		case "y":
+			AisRelayToogle(dev);
+			break;
+		case "G":
+			AisLockOpen(dev);
+			break;
 		}	   	  
 	  return true;
    }
@@ -209,6 +218,45 @@ public class MyAisWrapper extends AisWrapper {
     	rv = AISConfigFileRead(dev, fileName, PASS);
     	System.out.printf("AIS_Config_Read():%s", libInstance.dl_status2str(rv.dl_status).getString(0));
         
+    }
+    
+   
+    
+    void AisGetIOState(S_DEVICE dev){
+    	RetValues rv;
+    	rv = AISGetIOState(dev);
+    	System.out.printf("IO STATE= intercom= %d, door= %d, relay_state= %d : %s\n",
+    			         rv.intercom, rv.door, rv.relay_state, libInstance.dl_status2str(rv.dl_status).getString(0));
+    	
+    }
+    
+    public RetValues AISRelayToogle(S_DEVICE dev){
+    	RetValues rv = new RetValues();
+    	AISGetIOState(dev);
+//    	if (dev.relayState>0){dev.relayState = 
+//    	dev.relayState = dev.relayState > 0;
+    	dev.relayState = 0;
+    	dev.devStatus = libInstance.AIS_RelayStateSet(dev.hnd, dev.relayState);
+    	rv.dl_status = dev.devStatus;
+    	rv.relay_state = dev.relayState;
+    	return rv;    
+    }
+    
+    void AisRelayToogle(S_DEVICE dev){
+    	RetValues rv;
+    	rv = AISRelayToogle(dev);
+    	System.out.printf("AIS_RelayStateSet(RELAY= %d) : %s\n", rv.relay_state, 
+    			         libInstance.dl_status2str(rv.dl_status).getString(0));
+    }
+    
+    
+    
+    void AisLockOpen(S_DEVICE dev){
+    	RetValues rv;
+    	int pulseDuration = 2000;
+    	rv = AISLockOpen(dev, pulseDuration);
+    	System.out.printf("AIS_LockOpen(pulse_duration= %d ms) : %s\n", 
+    			         pulseDuration, libInstance.dl_status2str(rv.dl_status).getString(0));
     }
     
     

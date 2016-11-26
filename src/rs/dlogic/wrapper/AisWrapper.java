@@ -41,7 +41,8 @@ class S_DEVICE{
 	byte[]devFTDI_Serial = new byte[9];
 	int devOpened;
 	int devStatus;
-	int systemStatus;	
+	int systemStatus;
+	int relayState;
 }
 
 class RetValues{	
@@ -50,9 +51,14 @@ class RetValues{
 	public int DST;
 	public long offset;
 	public int dl_status;
-	//BW list
+	//BlackWhite list
 	public int listSize = 0;
 	public String strList = null;
+	//Open Gate
+	public int intercom;
+	public int door;
+	public int relay_state;
+	
 }
 
 
@@ -206,9 +212,26 @@ public class AisWrapper {
    	    return rv;
     }
     
+    public RetValues AISGetIOState(S_DEVICE dev){
+    	RetValues rv = new RetValues();
+    	IntByReference intercom = new IntByReference();
+    	IntByReference door = new IntByReference();
+    	IntByReference relay_state = new IntByReference();
+    	dev.devStatus = libInstance.AIS_GetIoState(dev.hnd, intercom, door, relay_state);    	    	
+    	rv.dl_status = dev.devStatus;
+    	rv.door = door.getValue();
+    	rv.intercom = intercom.getValue();
+    	rv.relay_state = relay_state.getValue();
+    	return rv;    	
+    }
     
-    
-    
+
+    public RetValues AISLockOpen(S_DEVICE dev,int pulseDuration){
+    	RetValues rv = new RetValues();    	
+    	dev.devStatus =libInstance.AIS_LockOpen(dev.hnd, pulseDuration);
+    	rv.dl_status = dev.devStatus;
+    	return rv;
+    }
     
     
     
@@ -407,15 +430,20 @@ public interface AisLibrary extends Library{
 		   				int green_slave,
 		   				int red_slave);
    
-   int AIS_OpenLock(Pointer p);
+   int AIS_LockOpen(Pointer device, int pulse_duration);
    
    int AIS_Config_Read(Pointer device,
 		              byte[] password,
 		              byte[] config_bin_filename);
    
+   int AIS_GetIoState(Pointer device,
+		              IntByReference intercom,
+		              IntByReference door,
+		              IntByReference relay_state);
    
+ 
    
-   
+   int AIS_RelayStateSet(Pointer device, int state);
    
    int device_type_enum2str(int devType, PointerByReference dev_type_str);          
    int device_type_str2enum(String devTypeStr,IntByReference devType);   
