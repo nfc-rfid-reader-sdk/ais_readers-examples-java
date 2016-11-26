@@ -30,6 +30,18 @@ import java.util.Map;
 //	     String AISGetLibraryVersionStr();
 //    }
 
+class S_LOG{
+	int index;
+	int action;
+	int readerID;
+	int cardID;
+	int systemID;
+	byte[]nfc_uid;
+	int nfcUidLen;
+	long timestamp;
+}
+
+
 class S_DEVICE{
 	int idx;
 	Pointer hnd;
@@ -41,8 +53,18 @@ class S_DEVICE{
 	byte[]devFTDI_Serial = new byte[9];
 	int devOpened;
 	int devStatus;
+	int statusLast;
 	int systemStatus;
 	int relayState;
+	int realTimeEvents;
+	int logAvailable;
+	int logUnread;
+	int logUnreadLast;
+	int cmdResponses;
+	int cmdPercent;
+	int timeOutOccured;
+	int status;
+	S_LOG log;
 }
 
 class RetValues{	
@@ -51,26 +73,26 @@ class RetValues{
 	public int DST;
 	public long offset;
 	public int dl_status;
-	//BlackWhite list
+	
 	public int listSize = 0;
 	public String strList = null;
-	//Open Gate
+	
 	public int intercom;
 	public int door;
 	public int relay_state;
-	
+	public Boolean ret_state;
+	public String ret_string;
 }
 
 
 public class AisWrapper {			
-	static  AisLibrary libInstance;
+		
+	public static  AisLibrary libInstance;
 	AisWrapper(){
 		libInstance = AisLibrary.aisReaders;
 	}
 	
-	
-	
-	
+
 	/**
 	 * functions implement
 	 * @author Vladan
@@ -225,7 +247,19 @@ public class AisWrapper {
     	return rv;    	
     }
     
-
+    public RetValues AISRelayToogle(S_DEVICE dev){
+    	RetValues rv = new RetValues();
+    	AISGetIOState(dev);
+    	if (dev.relayState == 0)dev.relayState = 1; 		   
+    	else dev.relayState = 0;    	    
+    	dev.devStatus = libInstance.AIS_RelayStateSet(dev.hnd, dev.relayState);
+    	rv.dl_status = dev.devStatus;
+    	rv.relay_state = dev.relayState;
+    	return rv;    
+    }
+    
+    
+    
     public RetValues AISLockOpen(S_DEVICE dev,int pulseDuration){
     	RetValues rv = new RetValues();    	
     	dev.devStatus =libInstance.AIS_LockOpen(dev.hnd, pulseDuration);
@@ -448,7 +482,7 @@ public interface AisLibrary extends Library{
    int device_type_enum2str(int devType, PointerByReference dev_type_str);          
    int device_type_str2enum(String devTypeStr,IntByReference devType);   
    Pointer dl_status2str(int status);   
-   
+   Pointer dbg_action2str(int action);
    long sys_get_timezone();
    int sys_get_daylight();
    long sys_get_dstbias();
@@ -458,7 +492,7 @@ public interface AisLibrary extends Library{
 		                IntByReference rteTest, IntByReference isHalfDuplex,
 		                IntByReference isAloneOnTheBus);
    
-   
+   Pointer 
    
 }
    	   	   

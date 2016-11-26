@@ -114,7 +114,7 @@ public class MyAisWrapper extends AisWrapper {
 	try {
 		dev.hnd = HND_LIST.get(index);		  		   		  
 		dev.idx = HND_LIST.indexOf(dev.hnd) + 1;
-		System.out.printf(" dev [%d] | hnd= 0x%X \n  " , dev.idx, dev.hnd.getInt(0));		
+		System.out.printf(" dev [%d] | hnd= 0x%X   " , dev.idx, dev.hnd.getInt(0));		
 		
 	} catch (IndexOutOfBoundsException | NullPointerException e) {		
 		System.out.format("Exception: %s",e.toString());
@@ -230,17 +230,7 @@ public class MyAisWrapper extends AisWrapper {
     	
     }
     
-    public RetValues AISRelayToogle(S_DEVICE dev){
-    	RetValues rv = new RetValues();
-    	AISGetIOState(dev);
-//    	if (dev.relayState>0){dev.relayState = 
-//    	dev.relayState = dev.relayState > 0;
-    	dev.relayState = 0;
-    	dev.devStatus = libInstance.AIS_RelayStateSet(dev.hnd, dev.relayState);
-    	rv.dl_status = dev.devStatus;
-    	rv.relay_state = dev.relayState;
-    	return rv;    
-    }
+   
     
     void AisRelayToogle(S_DEVICE dev){
     	RetValues rv;
@@ -252,8 +242,8 @@ public class MyAisWrapper extends AisWrapper {
     
     
     void AisLockOpen(S_DEVICE dev){
-    	RetValues rv;
-    	int pulseDuration = 2000;
+    	RetValues rv;    	
+    	int pulseDuration = CONSTANTS.Numeric.PULSE_DURATION.value(); 
     	rv = AISLockOpen(dev, pulseDuration);
     	System.out.printf("AIS_LockOpen(pulse_duration= %d ms) : %s\n", 
     			         pulseDuration, libInstance.dl_status2str(rv.dl_status).getString(0));
@@ -347,7 +337,8 @@ public class MyAisWrapper extends AisWrapper {
     	System.out.print(sBuffer + "\nEnter white list:");    	    	   
     	rv = AISWhiteListWrite(dev, PASS, inputBL.nextLine());
     	fOut = String.format("\nAIS_Whitelist_Write():white_list= %s > %s\n" , rv.strList, libInstance.dl_status2str(rv.dl_status).getString(0));
-        System.out.println(fOut);    
+        System.out.println(fOut);
+        inputBL.close();
     }
      
     
@@ -568,7 +559,12 @@ public class MyAisWrapper extends AisWrapper {
 		}				
 	}
 
-   
+ 
+	
+	
+	
+	
+
  //************************************************************************
 	void listDevices(){    	
     	prepareListForCheck();
@@ -720,8 +716,7 @@ public class MyAisWrapper extends AisWrapper {
 	    		HND_LIST.add(hnd.getValue());    		
 	    		AisOpen();
 	    		dev.idx = 1;
-	    		dev.hnd = hnd.getValue(); 
-	            //dev.devSerial = Integer.parseInt(devSerial.getValue().getString(0)); 
+	    		dev.hnd = hnd.getValue(); 	            
 	            dev.devSerial = devSerial.getValue().getString(0); 	            	            	            	            	            	            	            
 	            dev.devType = devType.getValue();
 	            dev.devID = devID.getValue();

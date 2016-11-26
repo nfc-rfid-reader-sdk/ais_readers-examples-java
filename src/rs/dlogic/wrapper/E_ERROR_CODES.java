@@ -1,5 +1,7 @@
 package rs.dlogic.wrapper;
 
+
+
 public enum E_ERROR_CODES{
 	DL_OK (0x00),      
     TIMEOUT_ERROR (0x01),  

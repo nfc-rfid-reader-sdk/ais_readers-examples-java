@@ -21,7 +21,6 @@ public enum E_KNOWN_DEVICE_TYPES {
 	}		
 	public int value(){
 		return value;
-	}
-	
+	}	
 }
 
