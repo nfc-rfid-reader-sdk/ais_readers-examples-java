@@ -78,7 +78,11 @@ public class MyAisWrapper extends AisWrapper {
     private ArrayList<Pointer>HND_LIST = new ArrayList<Pointer>();
 	private static Scanner terminal;
 	private Map<String, Boolean> Lights = new HashMap<>();
-	S_DEVICE dev = new S_DEVICE();	
+	S_DEVICE dev = new S_DEVICE();
+	Rte rte = new Rte();
+	
+	
+	
     //***************************************************************************
    
     
@@ -190,6 +194,12 @@ public class MyAisWrapper extends AisWrapper {
 			break;
 		case "G":
 			AisLockOpen(dev);
+			break;
+		case "r":
+			AisRTEListen(dev, CONSTANTS.Numeric.SECONDS.value());
+			break;
+		case "l":
+			System.out.println(AisLogGet(dev));
 			break;
 		}	   	  
 	  return true;
@@ -560,8 +570,29 @@ public class MyAisWrapper extends AisWrapper {
 	}
 
  
+	public void AisRTEListen(S_DEVICE dev, int maxSec){				
+		long stopTime = new Date(System.currentTimeMillis() + ((maxSec*90)*10)).getTime();			
+		while (new Date(System.currentTimeMillis()).getTime()<= stopTime){			
+			for (Pointer hnd : HND_LIST){
+				dev.hnd = hnd;
+				rte.AisMainLoop(dev);
+			}
+		}
+		System.out.println("END RTE listen...");
+	}
 	
-	
+	public String AisLogGet(S_DEVICE dev){
+		RetValues rv;
+		byte[] pass = CONSTANTS.AlfaNumeric.PASS.strValue().getBytes();
+		dev.status = libInstance.AIS_GetLog(dev.hnd, pass);
+		if (dev.status !=0){
+			return libInstance.dl_status2str(dev.status).getString(0);
+			
+		}
+		rte.DoCmd(dev);
+		rv = rte.AisPrintLog(dev);	
+		return rv.ret_string;
+	}
 	
 	
 

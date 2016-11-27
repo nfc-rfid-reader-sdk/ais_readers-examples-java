@@ -30,6 +30,13 @@ import java.util.Map;
 //	     String AISGetLibraryVersionStr();
 //    }
 
+
+class S_PROGRESS{
+	boolean printHdr;
+	int percentOld;
+}
+
+
 class S_LOG{
 	int index;
 	int action;
@@ -43,6 +50,7 @@ class S_LOG{
 
 
 class S_DEVICE{
+	
 	int idx;
 	Pointer hnd;
 	String devSerial;
@@ -62,9 +70,12 @@ class S_DEVICE{
 	int logUnreadLast;
 	int cmdResponses;
 	int cmdPercent;
+	Boolean cmdFinish;
 	int timeOutOccured;
 	int status;
-	S_LOG log;
+	int Status;
+	//S_LOG log;
+	S_LOG log = new S_LOG();
 }
 
 class RetValues{	
@@ -492,7 +503,7 @@ public interface AisLibrary extends Library{
 		                IntByReference rteTest, IntByReference isHalfDuplex,
 		                IntByReference isAloneOnTheBus);
    
-   Pointer 
+    
    
 }
    	   	   
