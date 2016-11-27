@@ -26,7 +26,7 @@ public class Rte extends AisWrapper {
 	
 	String rteFormat = "| %5d | %28s | %5d | %7d | %5d | %24s | %10d | %s | ";
 	
-	public RetValues AisPrintRTE(S_DEVICE dev){
+	public RetValues AISPrintRTE(S_DEVICE dev){
 //		RetValues rv = null;
 		String resRte = "", res = "";
 		IntByReference logIndex = new IntByReference();
@@ -47,10 +47,8 @@ public class Rte extends AisWrapper {
 				       + rteListHeader[1] + "\n"
 				       + rteListHeader[0] + "\n";
 		
-		while (true){
-			
-			DL_STATUS = libInstance.AIS_ReadRTE(dev.hnd, logIndex, logAction, logReaderID, logCardID, logSystemID, nfcUid, nfcUidLen, timeStamp);
-			
+		while (true){			
+			DL_STATUS = libInstance.AIS_ReadRTE(dev.hnd, logIndex, logAction, logReaderID, logCardID, logSystemID, nfcUid, nfcUidLen, timeStamp);			
 			dev.log.index = logIndex.getValue();
 			dev.log.action = logAction.getValue();
 			dev.log.readerID = logReaderID.getValue();
@@ -58,13 +56,11 @@ public class Rte extends AisWrapper {
 			dev.log.systemID = logSystemID.getValue();
 			dev.log.nfc_uid = nfcUid;
 			dev.log.nfcUidLen = nfcUidLen.getValue();
-			dev.log.timestamp = timeStamp.getValue();
-												
+			dev.log.timestamp = timeStamp.getValue();											
 			if (DL_STATUS !=0){
 				break;
 			}
-			nfcuid = new String(dev.log.nfc_uid);
-			
+			nfcuid = new String(dev.log.nfc_uid);			
 			resRte += String.format(rteFormat, dev.log.index, 
 					               AisWrapper.libInstance.dbg_action2str(dev.log.action).getString(0),
 					               dev.log.readerID, dev.log.cardID, dev.log.systemID,
@@ -79,7 +75,7 @@ public class Rte extends AisWrapper {
 	}
 	
 	
-	public RetValues AisPrintLog(S_DEVICE dev){
+	public RetValues AISPrintLog(S_DEVICE dev){
 //		RetValues rv = null;
 		String rteRes = "", res = "";
 		IntByReference logIndex = new IntByReference();
@@ -130,7 +126,7 @@ public class Rte extends AisWrapper {
 	
 	
 	
-	public RetValues AisMainLoop(S_DEVICE dev){
+	public RetValues AISMainLoop(S_DEVICE dev){
 //		RetValues rv = null;
 		IntByReference realTimeEvents = new IntByReference();
 		IntByReference logAvailable = new IntByReference();
@@ -170,13 +166,13 @@ public class Rte extends AisWrapper {
 		}
 		
 		if (dev.realTimeEvents != 0){
-			rv = AisPrintRTE(dev);
+			rv = AISPrintRTE(dev);
 			System.out.println(rv.ret_string);
 			
 		}
 		
 		if (dev.logAvailable != 0){
-			rv = AisPrintLog(dev);
+			rv = AISPrintLog(dev);
 			//System.out.print(rv.ret_string);
 		}
 		
@@ -232,7 +228,7 @@ public class Rte extends AisWrapper {
 	  dev.cmdFinish = false;
 	  progress.printHdr = true;
 	  while(!dev.cmdFinish){
-		  rv = AisMainLoop(dev);
+		  rv = AISMainLoop(dev);
 		  if (!rv.ret_state){
 			  break;
 		  }

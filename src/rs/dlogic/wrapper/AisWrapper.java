@@ -57,8 +57,8 @@ class S_DEVICE{
 	int devType;
 	int devID;
 	int devFW_VER;
-	int devCommSpeed;
-	byte[]devFTDI_Serial = new byte[9];
+	int devCommSpeed;	
+	String devFTDI_Serial;
 	int devOpened;
 	int devStatus;
 	int statusLast;
@@ -73,34 +73,35 @@ class S_DEVICE{
 	Boolean cmdFinish;
 	int timeOutOccured;
 	int status;
-	int Status;
-	//S_LOG log;
+	int Status;	
 	S_LOG log = new S_LOG();
 }
 
 class RetValues{	
-	public long currentTime;
-    public long timezone;
-	public int DST;
-	public long offset;
-	public int dl_status;
-	
-	public int listSize = 0;
-	public String strList = null;
-	
-	public int intercom;
-	public int door;
-	public int relay_state;
-	public Boolean ret_state;
-	public String ret_string;
+	 long currentTime;
+     long timezone;
+	 int DST;
+	 long offset;
+	 int dl_status;	
+	 int listSize = 0;
+	 String strList = null;	
+	 int intercom;
+	 int door;
+	 int relay_state;
+	 int hardwareType;
+	 int firmwareVersion;
+	 Boolean ret_state;
+	 String ret_string;
 }
 
 
 public class AisWrapper {			
 		
 	public static  AisLibrary libInstance;
+	RetValues rv = new RetValues();
 	AisWrapper(){
 		libInstance = AisLibrary.aisReaders;
+		 
 	}
 	
 
@@ -133,7 +134,7 @@ public class AisWrapper {
 	
     public RetValues AISGetTime(Pointer devHnd){
     	int DL_STATUS;
-    	RetValues rv = new RetValues(); 
+    	//RetValues rv = new RetValues(); 
     	LongByReference currentTime = new LongByReference();
     	IntByReference timezone = new IntByReference();
     	IntByReference DST = new IntByReference();
@@ -153,7 +154,7 @@ public class AisWrapper {
     
     public RetValues AISSetTime(Pointer devHnd, String pass){
     	int DL_STATUS;
-    	RetValues rv = new RetValues();     	    	
+    	//RetValues rv = new RetValues();     	    	
     	long currentTime = new Date().getTime();     	
     	long timezone = libInstance.sys_get_timezone();
     	int DST = libInstance.sys_get_daylight();
@@ -174,7 +175,7 @@ public class AisWrapper {
     }
     
     public RetValues AISConfigFileRead(S_DEVICE dev,String fileName, String pass){
-    	RetValues rv = new RetValues();
+    	//RetValues rv = new RetValues();
     	byte[]passw = pass.getBytes();
     	byte[]configFile = fileName.getBytes();
     	dev.devStatus = libInstance.AIS_Config_Read(dev.hnd, passw, configFile);    	   	    
@@ -183,7 +184,7 @@ public class AisWrapper {
     }
     
     public RetValues AISBlackListWrite(S_DEVICE dev, String pass, String blackList){
-    	RetValues rv = new RetValues();    	
+    	//RetValues rv = new RetValues();    	
     	String listSize = "";
     	byte[] PASS = pass.getBytes();
     	byte[] bBlackList = blackList.getBytes();
@@ -194,7 +195,7 @@ public class AisWrapper {
     }
     
     public RetValues AISWhiteListWrite(S_DEVICE dev, String pass, String whiteList){
-    	RetValues rv = new RetValues();    	
+    	//RetValues rv = new RetValues();    	
     	String listSize = "";
     	byte[] PASS = pass.getBytes();
     	byte[] bWhiteList = whiteList.getBytes();
@@ -206,7 +207,7 @@ public class AisWrapper {
     
     public RetValues AISBlackListRead(S_DEVICE dev, String pass){
     	PointerByReference blackList = new PointerByReference();
-    	RetValues rv = new RetValues();    	
+    	//RetValues rv = new RetValues();    	
     	String listSize = null;
     	byte[] PASS = pass.getBytes();
     	dev.devStatus = libInstance.AIS_Blacklist_Read(dev.hnd, PASS, blackList);
@@ -223,7 +224,7 @@ public class AisWrapper {
     
     public RetValues AISWhiteListRead(S_DEVICE dev, String pass){
     	PointerByReference whiteList = new PointerByReference();
-    	RetValues rv = new RetValues();    	
+    	//RetValues rv = new RetValues();    	
     	String listSize = "";
     	byte[] PASS = pass.getBytes();
     	dev.devStatus = libInstance.AIS_Whitelist_Read(dev.hnd, PASS, whiteList);    
@@ -239,14 +240,14 @@ public class AisWrapper {
     }
     
     public RetValues AISTestLights(S_DEVICE dev, int greenMaster, int redMaster, int greenSlave, int redSlave){
-    	RetValues rv = new RetValues();     	  	 
+    	//RetValues rv = new RetValues();     	  	 
    	    dev.devStatus = libInstance.AIS_LightControl(dev.hnd, greenMaster, redMaster, greenSlave, redSlave);   	    		                        	   
    	    rv.dl_status = dev.devStatus;    	    	
    	    return rv;
     }
     
     public RetValues AISGetIOState(S_DEVICE dev){
-    	RetValues rv = new RetValues();
+    	//RetValues rv = new RetValues();
     	IntByReference intercom = new IntByReference();
     	IntByReference door = new IntByReference();
     	IntByReference relay_state = new IntByReference();
@@ -259,7 +260,7 @@ public class AisWrapper {
     }
     
     public RetValues AISRelayToogle(S_DEVICE dev){
-    	RetValues rv = new RetValues();
+    	//RetValues rv = new RetValues();
     	AISGetIOState(dev);
     	if (dev.relayState == 0)dev.relayState = 1; 		   
     	else dev.relayState = 0;    	    
@@ -272,13 +273,20 @@ public class AisWrapper {
     
     
     public RetValues AISLockOpen(S_DEVICE dev,int pulseDuration){
-    	RetValues rv = new RetValues();    	
+    	//RetValues rv = new RetValues();    	
     	dev.devStatus =libInstance.AIS_LockOpen(dev.hnd, pulseDuration);
     	rv.dl_status = dev.devStatus;
     	return rv;
     }
     
-    
+    protected RetValues AISGetVersion(S_DEVICE dev){
+    	IntByReference hardwareType = new IntByReference();
+    	IntByReference firmwareVersion = new IntByReference();
+    	rv.dl_status = libInstance.AIS_GetVersion(dev.hnd, hardwareType, firmwareVersion);
+    	rv.hardwareType = hardwareType.getValue();
+    	rv.firmwareVersion = firmwareVersion.getValue();
+    	return rv;
+    }
     
     
  //*********************************************************************************   
@@ -362,6 +370,11 @@ public interface AisLibrary extends Library{
 			
 	Pointer AIS_GetLibraryVersionStr();
 	
+	int AIS_GetVersion(Pointer device,
+			          IntByReference hardware_type,
+			          IntByReference firmware_version
+			          );
+	
 	int AIS_MainLoop(Pointer pDevice_HND, 
              IntByReference RealTimeEvents,
 			 IntByReference LogAvailable,
@@ -380,7 +393,8 @@ public interface AisLibrary extends Library{
 						    IntByReference pDevice_ID,
 						    IntByReference pDevice_FW_VER,
 						    IntByReference pDevice_CommSpeed,
-						    byte[] pDevice_FTDI_Serial,						   
+						    //byte[] pDevice_FTDI_Serial,						   
+						    PointerByReference pDevice_FTDI_Serial,						   
 						    IntByReference pDevice_isOpened,
 						    IntByReference pDevice_Status,
 						    IntByReference pSystem_Status								
@@ -494,6 +508,7 @@ public interface AisLibrary extends Library{
    int device_type_str2enum(String devTypeStr,IntByReference devType);   
    Pointer dl_status2str(int status);   
    Pointer dbg_action2str(int action);
+   Pointer sys_get_timezone_info();
    long sys_get_timezone();
    int sys_get_daylight();
    long sys_get_dstbias();
