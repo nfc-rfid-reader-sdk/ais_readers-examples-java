@@ -206,13 +206,18 @@ public class MyAisWrapper extends AisWrapper {
 		case "l":
 			System.out.println(AisLogGet(dev));
 			break;
+		case "n":
+		    System.out.println(AisLogByIndex(dev));
+		    break;
+		case "N":
+			System.out.println(AisLogByTime(dev));
+			break;
 		}	   	  
 	  return true;
    }
    
     @SuppressWarnings("resource")
-    void AisConfigFileRead(S_DEVICE dev){
-    	//RetValues rv;
+    void AisConfigFileRead(S_DEVICE dev){    	
     	SimpleDateFormat formatter = new SimpleDateFormat("yyyyMMdd_hhmmss");
     	String localTime = formatter.format(new Date()).toString();     	
     	String fileName = String.format("BaseHD-%s-ID%d-%s", dev.devSerial, dev.devID, localTime);    	
@@ -237,8 +242,7 @@ public class MyAisWrapper extends AisWrapper {
     
    
     
-    void AisGetIOState(S_DEVICE dev){
-    	//RetValues rv;
+    void AisGetIOState(S_DEVICE dev){    	
     	rv = AISGetIOState(dev);
     	System.out.printf("IO STATE= intercom= %d, door= %d, relay_state= %d : %s\n",
     			         rv.intercom, rv.door, rv.relay_state, libInstance.dl_status2str(rv.dl_status).getString(0));
@@ -247,8 +251,7 @@ public class MyAisWrapper extends AisWrapper {
     
    
     
-    void AisRelayToogle(S_DEVICE dev){
-    	//RetValues rv;
+    void AisRelayToogle(S_DEVICE dev){    	
     	rv = AISRelayToogle(dev);
     	System.out.printf("AIS_RelayStateSet(RELAY= %d) : %s\n", rv.relay_state, 
     			         libInstance.dl_status2str(rv.dl_status).getString(0));
@@ -256,8 +259,7 @@ public class MyAisWrapper extends AisWrapper {
     
     
     
-    void AisLockOpen(S_DEVICE dev){
-    	//RetValues rv;    	
+    void AisLockOpen(S_DEVICE dev){    	    	
     	int pulseDuration = CONSTANTS.Numeric.PULSE_DURATION.value(); 
     	rv = AISLockOpen(dev, pulseDuration);
     	System.out.printf("AIS_LockOpen(pulse_duration= %d ms) : %s\n", 
@@ -286,8 +288,7 @@ public class MyAisWrapper extends AisWrapper {
    
 
     void AisGetTime(S_DEVICE dev){
-    	String fOut;    	    	
-    	//RetValues rv;     	
+    	String fOut;    	    	    	    	
     	rv = AISGetTime(dev.hnd);    	    	    
     	fOut = String.format("AIS_GetTime(dev[%d] hnd=0x%X):%s > (currentTime= %d | tz= %d | dst= %d | offset= %d): %s\n",
     			              dev.idx, dev.hnd.getInt(0), libInstance.dl_status2str(rv.dl_status).getString(0), rv.currentTime, rv.timezone, rv.DST, rv.offset,
@@ -297,8 +298,7 @@ public class MyAisWrapper extends AisWrapper {
     
   
     void AisSetTime(S_DEVICE dev){
-    	String fOut;    	    	
-    	//RetValues rv;     	
+    	String fOut;    	    	    	    	
     	rv = AISSetTime(dev.hnd, PASS);    	    	    
     	fOut = String.format("\nAIS_SetTime(dev[%d] hnd=0x%X) %s > (currentTime= %d | tz= %d | dst= %d | offset= %d): %s\n",
     			               dev.idx, dev.hnd.getInt(0), libInstance.dl_status2str(rv.dl_status).getString(0), rv.currentTime, rv.timezone, rv.DST, rv.offset,
@@ -309,8 +309,7 @@ public class MyAisWrapper extends AisWrapper {
     
     
     void AisBlackListRead(S_DEVICE dev){
-    	String fOut;    	    	
-    	//RetValues rv;    	
+    	String fOut;    	    	    	    	
     	rv = AISBlackListRead(dev, PASS);    	
     	fOut = String.format("\nAIS_Blacklist_Read() > black_list(size= %d | %s) > %s\n" ,
     			             rv.listSize, rv.strList, libInstance.dl_status2str(rv.dl_status).getString(0) );
@@ -319,8 +318,7 @@ public class MyAisWrapper extends AisWrapper {
    
    // @SuppressWarnings("resource")
     void AisBlackListWrite(S_DEVICE dev){
-    	String fOut;    	    	
-    	//RetValues rv;    	
+    	String fOut;    	    	    	    
 		Scanner inputBL = new Scanner(System.in);
     	String sBuffer =  "=- Write Black List -=\n"
     					+ "Try to write black-list decimal numbers (delimited with anything)\n"
@@ -335,8 +333,7 @@ public class MyAisWrapper extends AisWrapper {
   
     void AisWhiteListRead(S_DEVICE dev) 
     {
-    	String fOut;    	    	
-    	//RetValues rv;    	
+    	String fOut;    	    	    	   
     	rv = AISWhiteListRead(dev, PASS);    	
     	fOut = String.format("\nAIS_Whitelist_Read() > white_list(size= %d | %s) > %s\n" ,
     			             rv.listSize, rv.strList, libInstance.dl_status2str(rv.dl_status).getString(0) );
@@ -344,8 +341,7 @@ public class MyAisWrapper extends AisWrapper {
     }
     
     void AisWhiteListWrite(S_DEVICE dev){
-    	String fOut;    	    	
-    	//RetValues rv;
+    	String fOut;    	    	    	
     	Scanner inputBL = new Scanner(System.in);
     	String sBuffer =  "=- Write White List -=\n"
     					+ "Enter white-list UIDs (in HEX format delimited with '.' or ':' or not)\n"
@@ -371,8 +367,7 @@ public class MyAisWrapper extends AisWrapper {
 	void AisTestLights(S_DEVICE dev){
     	String lightMeni = "\tg : green master | r : red master | G : green slave | R : red slave  || x : exit \n"
     			         + "\t-----------------";
-    	System.out.println(lightMeni); 
-    	//RetValues rv;
+    	System.out.println(lightMeni);     	
     	String fOut;    	
     	Scanner s;
     	s = new Scanner(System.in);
@@ -587,8 +582,7 @@ public class MyAisWrapper extends AisWrapper {
 		System.out.println("END RTE listen...");
 	}
 	
-	public String AisLogGet(S_DEVICE dev){
-		//RetValues rv;
+	public String AisLogGet(S_DEVICE dev){		
 		byte[] pass = CONSTANTS.AlfaNumeric.PASS.strValue().getBytes();
 		dev.status = libInstance.AIS_GetLog(dev.hnd, pass);
 		if (dev.status !=0){
@@ -600,11 +594,53 @@ public class MyAisWrapper extends AisWrapper {
 		return rv.ret_string;
 	}
 	
-	public void AisGetVersion(S_DEVICE dev){
-		//RetValues rv;
+	public void AisGetVersion(S_DEVICE dev){		
 		rv = AISGetVersion(dev);
 		System.out.format("AIS_GetVersion() |>>hw = %d | fw = %d\n", rv.hardwareType, rv.firmwareVersion);		
 	}
+	
+	
+	@SuppressWarnings("resource")
+	public String AisLogByIndex(S_DEVICE dev){				
+		Scanner inIndex = new Scanner(System.in);
+		System.out.println("#=- Print log by index -=#");
+		System.out.print("Enter index start: ");				
+		int startIndex = inIndex.nextInt();
+		System.out.print("Enter index end  : ");
+		int endIndex = inIndex.nextInt();				
+		byte[] pass = CONSTANTS.AlfaNumeric.PASS.strValue().getBytes();
+		dev.status = libInstance.AIS_GetLogByIndex(dev.hnd, pass, startIndex, endIndex);
+		String fOut = String.format("AIS_GetLogByIndex:(pass: %s [ %d - %d ] >> %s)\n", new String(pass), startIndex, endIndex, libInstance.dl_status2str(dev.status).getString(0));
+		
+		if (dev.status !=0){
+			return fOut;
+		}
+		rte.DoCmd(dev);
+		rv = rte.AISPrintLog(dev);		
+		return  fOut + rv ;			  			
+	}
+	
+	@SuppressWarnings("resource")
+	public String AisLogByTime(S_DEVICE dev){
+		Scanner inIndex = new Scanner(System.in);
+		System.out.println("#=- Read LOG by Time (time-stamp) range -=#");
+		System.out.print("Enter time-stamp start: ");				
+		int startTime = inIndex.nextInt();
+		System.out.print("Enter time-stamp end  : ");
+		int endTime = inIndex.nextInt();				
+		byte[] pass = CONSTANTS.AlfaNumeric.PASS.strValue().getBytes();
+		dev.status = libInstance.AIS_GetLogByTime(dev.hnd, pass, startTime, endTime);
+		String fOut = String.format("AIS_GetLogByTime:(pass: %s [ %d - %d ] >> %s)\n", new String(pass), startTime, endTime, libInstance.dl_status2str(dev.status).getString(0));
+		
+		if (dev.status !=0){
+			return fOut;
+		}
+		rte.DoCmd(dev);
+		rv = rte.AISPrintLog(dev);		
+		return  fOut + rv ;			  			
+	}
+	
+	
 	
 
  //************************************************************************
