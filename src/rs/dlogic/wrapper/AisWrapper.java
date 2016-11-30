@@ -14,12 +14,14 @@ import com.sun.jna.*;
 import com.sun.jna.ptr.ByteByReference;
 import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.ptr.LongByReference;
+import com.sun.jna.ptr.NativeLongByReference;
 import com.sun.jna.ptr.PointerByReference;
 import com.sun.org.apache.bcel.internal.generic.RET;
 
 import rs.dlogic.wrapper.AisWrapper.AisLibrary;
 
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Hashtable;
@@ -49,8 +51,7 @@ class S_LOG{
 }
 
 
-class S_DEVICE{
-	
+class S_DEVICE{	
 	int idx;
 	Pointer hnd;
 	String devSerial;
@@ -78,7 +79,7 @@ class S_DEVICE{
 }
 
 class RetValues{	
-	 long currentTime;
+	 long currentTime;	
      long timezone;
 	 int DST;
 	 long offset;
@@ -133,8 +134,8 @@ public class AisWrapper {
     }
 	
     public RetValues AISGetTime(Pointer devHnd){
-    	int DL_STATUS;    	
-    	LongByReference currentTime = new LongByReference();
+    	int DL_STATUS;     	
+    	LongByReference currentTime = new LongByReference(0);    	
     	IntByReference timezone = new IntByReference();
     	IntByReference DST = new IntByReference();
     	IntByReference offset = new IntByReference();
@@ -147,7 +148,7 @@ public class AisWrapper {
 	   rv.DST = DST.getValue();
 	   rv.offset = offset.getValue();
 	   rv.timezone = timezone.getValue();
-	   rv.dl_status = DL_STATUS;
+	   rv.dl_status = DL_STATUS;	  	  
        return rv;    			    		    
     }
     
@@ -164,7 +165,7 @@ public class AisWrapper {
     			                            timezone, 
     			                            DST, 
     			                            offset);    	    			    	    	   	
-	   rv.currentTime = currentTime;
+	   rv.currentTime = currentTime;      
 	   rv.DST = DST;
 	   rv.offset = offset;
 	   rv.timezone = timezone;
@@ -412,7 +413,7 @@ public interface AisLibrary extends Library{
 			long offset);
    
    int AIS_GetTime(Pointer device,
-   		LongByReference current_time,
+   		LongByReference current_time,		
    		IntByReference timezone,
    		IntByReference DST,
    		IntByReference offset);
@@ -439,6 +440,7 @@ public interface AisLibrary extends Library{
    int AIS_ReadLog_File_Get(Pointer device, byte[] file);
    
    int AIS_ReadLog(Pointer device, 
+		    IntByReference log_index,
 			IntByReference log_action, 
 			IntByReference log_reader_id, 
 			IntByReference log_card_id, 
@@ -446,6 +448,20 @@ public interface AisLibrary extends Library{
 			byte[]nfc_uid,
 			IntByReference nfc_uid_len,
 			LongByReference timestamp);
+   
+   int AIS_UnreadLOG_Get(Pointer device,
+		    IntByReference log_index,
+			IntByReference log_action, 
+			IntByReference log_reader_id, 
+			IntByReference log_card_id, 
+			IntByReference log_system_id,
+			byte[]nfc_uid,
+			IntByReference nfc_uid_len,
+			LongByReference timestamp
+		   );
+   
+   int AIS_UnreadLOG_Ack(Pointer device,
+		   int records_to_ack);
    
    int AIS_Close(Pointer device);
    

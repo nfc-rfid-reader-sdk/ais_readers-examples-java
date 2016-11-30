@@ -73,12 +73,13 @@ public class MyAisWrapper extends AisWrapper {
     }
 
     
-    public static final String PASS = "1111";
+    //public static final String PASS = "1111";
+    public static String PASS = CONSTANTS.AlfaNumeric.PASS.strValue();
     private List<String>myFormats = new ArrayList<String>();
     private ArrayList<Pointer>HND_LIST = new ArrayList<Pointer>();
 	private static Scanner terminal;
 	private Map<String, Boolean> Lights = new HashMap<>();
-	S_DEVICE dev = new S_DEVICE();
+	S_DEVICE dev = new S_DEVICE();	
 	Rte rte = new Rte();
 	
 	
@@ -94,7 +95,7 @@ public class MyAisWrapper extends AisWrapper {
 	   
    }
    
-   String ShowMeni(){
+   private String ShowMeni(){
 	   String myMeni = "\n--------------------------\n" 
 			   		 
 			         + "q : List devices\t\t\to : Open device\t\t\t\tc : Close device "
@@ -126,7 +127,7 @@ public class MyAisWrapper extends AisWrapper {
 	   
    }
    
-   public Boolean MeniLoop(){		   
+   private Boolean MeniLoop(){		   
 	   terminal = new Scanner(System.in);	   
 	   String mChar = terminal.nextLine();	 	 
 	   int index = 0;
@@ -212,6 +213,10 @@ public class MyAisWrapper extends AisWrapper {
 		case "N":
 			System.out.println(AisLogByTime(dev));
 			break;
+		case "u":
+			UnreadLog ulog = new UnreadLog(dev);
+			ulog.AisUnreadLog();
+			break;
 		}	   	  
 	  return true;
    }
@@ -292,7 +297,8 @@ public class MyAisWrapper extends AisWrapper {
     	rv = AISGetTime(dev.hnd);    	    	    
     	fOut = String.format("AIS_GetTime(dev[%d] hnd=0x%X):%s > (currentTime= %d | tz= %d | dst= %d | offset= %d): %s\n",
     			              dev.idx, dev.hnd.getInt(0), libInstance.dl_status2str(rv.dl_status).getString(0), rv.currentTime, rv.timezone, rv.DST, rv.offset,
-    			               new Date(new Date(rv.currentTime).getTime()) );    	    	   
+    			               new Date(rv.currentTime).toString() 
+    			               );    	    	   
     	System.out.println(fOut);    	    
     }
     
@@ -302,7 +308,8 @@ public class MyAisWrapper extends AisWrapper {
     	rv = AISSetTime(dev.hnd, PASS);    	    	    
     	fOut = String.format("\nAIS_SetTime(dev[%d] hnd=0x%X) %s > (currentTime= %d | tz= %d | dst= %d | offset= %d): %s\n",
     			               dev.idx, dev.hnd.getInt(0), libInstance.dl_status2str(rv.dl_status).getString(0), rv.currentTime, rv.timezone, rv.DST, rv.offset,
-    			               new Date(new Date(rv.currentTime).getTime()) );    	    	   
+    			               new Date(rv.currentTime).toString()
+    			               );    	    	   
     	System.out.println(fOut); 
     }
    
@@ -582,16 +589,17 @@ public class MyAisWrapper extends AisWrapper {
 		System.out.println("END RTE listen...");
 	}
 	
-	public String AisLogGet(S_DEVICE dev){		
+	public String AisLogGet(S_DEVICE dev){				
 		byte[] pass = CONSTANTS.AlfaNumeric.PASS.strValue().getBytes();
 		dev.status = libInstance.AIS_GetLog(dev.hnd, pass);
+		
 		if (dev.status !=0){
 			return libInstance.dl_status2str(dev.status).getString(0);
 			
 		}
 		rte.DoCmd(dev);
 		rv = rte.AISPrintLog(dev);	
-		return rv.ret_string;
+		return rv.ret_string;		
 	}
 	
 	public void AisGetVersion(S_DEVICE dev){		
@@ -640,7 +648,7 @@ public class MyAisWrapper extends AisWrapper {
 		return  fOut + rv ;			  			
 	}
 	
-	
+  
 	
 
  //************************************************************************
