@@ -20,18 +20,14 @@ public class UnreadLog extends Rte{
 	UnreadLog(S_DEVICE device){
 		this.dev = device;		
 	}
-		
-	
 
-    
-    
-    
     /**
      * UnreadLogInfo()
      * @return read log count and rte count
      */
     protected RetValues AisUnreadLogInfo(){
-     String sLogCount = "", sRteCount = "";         
+     String sLogCount = "";
+     String sRteCount = "";         
      int logCount = libInstance.AIS_ReadLog_Count(dev.hnd);
      if (logCount == 0){
         sLogCount = String.format("\nAIS_ReadLog_Count() %d\n" , logCount);
@@ -88,11 +84,11 @@ public class UnreadLog extends Rte{
 	               libInstance.dbg_action2str(dev.log.action).getString(0),
 	               dev.log.readerID, dev.log.cardID, dev.log.systemID,		               
 	               "[" + Integer.toString(dev.log.nfcUidLen) + "] " + nfcuid,
-	               dev.log.timestamp, new Date(dev.log.timestamp).toString()
+	               dev.log.timestamp, new Date(dev.log.timestamp * 1000).toString()
 	              );
 	    rv.ret_string = rteHead
-	    		      + res
-	    		      + rteListHeader[0]
+	    		      + res + "\n"
+	    		      + rteListHeader[0] + "\n"
 	    		      + String.format("\nAIS_UnreadLOG_Get() %s\n", libInstance.dl_status2str(dev.status).getString(0));
 	    return rv;			
     }

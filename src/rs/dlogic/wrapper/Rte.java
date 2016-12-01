@@ -18,17 +18,18 @@ public class Rte extends AisWrapper {
 	
 	private int DL_STATUS;
 	S_PROGRESS progress = new S_PROGRESS();
-	RetValues rv = new RetValues();
+	//RetValues rv = new RetValues();
 	
-	protected String[] rteListHeader = {"-----------------------------------------------------------------------------------------------------------------------------------------",
-			"| Idx   |              action              | RD ID | Card ID | JobNr |    NFC [length] : UID    | Time-stamp |       Date - Time        |"
+	protected String[] rteListHeader = {"---------------------------------------------------------------------------------------------------------------------------------------------",
+			                            "| Idx   |              action              | RD ID | Card ID | JobNr |    NFC [length] : UID    | Time-stamp |       Date - Time            |"
 			};  
 	
-	protected String rteFormat = "| %5d | %32s | %5d | %7d | %5d | %24s | %10d | %s | \n";
+	protected String rteFormat = "| %5d | %32s | %5d | %7d | %5d | %24s | %10d | %s | ";
 	
 	protected RetValues AISPrintRTE(S_DEVICE dev){
-		String resRte = "", 
-				  res = "";
+		String res; 
+		StringBuilder result = new StringBuilder();
+		StringBuilder nfcuid = new StringBuilder();		
 		IntByReference logIndex = new IntByReference();
 		IntByReference logAction = new IntByReference();
 		IntByReference logReaderID = new IntByReference();
@@ -36,9 +37,7 @@ public class Rte extends AisWrapper {
 		IntByReference logSystemID = new IntByReference();
 		byte[] nfcUid = new byte[CONSTANTS.Numeric.NFC_UID_MAX_LEN.value()];
 		IntByReference nfcUidLen = new IntByReference();
-		LongByReference timeStamp = new LongByReference();
-		String nfcuid = "";
-		
+		LongByReference timeStamp = new LongByReference();		
 		int rteCount = libInstance.AIS_ReadLog_Count(dev.hnd);
 			
 		String rteHead = String.format("AIS_ReadRTE_Count = %d\n", rteCount)
@@ -60,24 +59,29 @@ public class Rte extends AisWrapper {
 			if (DL_STATUS !=0){
 				break;
 			}
-			nfcuid = new String(dev.log.nfc_uid);			
-			resRte += String.format(rteFormat, dev.log.index, 
+			for (int i=0;i<nfcUidLen.getValue();i++)
+				nfcuid.append(String.format(":%02X", nfcUid[i]));
+			
+			result.append(String.format(rteFormat, dev.log.index, 
 					               AisWrapper.libInstance.dbg_action2str(dev.log.action).getString(0),
 					               dev.log.readerID, dev.log.cardID, dev.log.systemID,
 					               "[" + Integer.toString(dev.log.nfcUidLen) + "] " + nfcuid,
-					               dev.log.timestamp, new Date(dev.log.timestamp).toString()
+					               dev.log.timestamp, new Date(dev.log.timestamp * 1000).toString())
 					              );
 								
 		}		
-		res = resRte + "\n" + rteListHeader[0] + "\n";				
+		res = result + "\n"			  
+			  + rteListHeader[0] 
+			  + "\n";				
 		rv.ret_string = rteHead + res + String.format("LOG unread (incremental) = %d %s\n", dev.logUnread, libInstance.dl_status2str(DL_STATUS).getString(0));
 		return rv;
 	}
 	
 	
-	protected RetValues AISPrintLog(S_DEVICE dev){
-		
-		String rteRes = "", res = "";
+	protected RetValues AISPrintLog(S_DEVICE dev){				
+		String res;
+		StringBuilder result = new StringBuilder();
+		StringBuilder nfcuid = new StringBuilder();
 		IntByReference logIndex = new IntByReference();
 		IntByReference logAction =  new IntByReference();
 		IntByReference logReaderID = new IntByReference();
@@ -85,8 +89,7 @@ public class Rte extends AisWrapper {
 		IntByReference logSystemID = new IntByReference();
 		byte[] nfcUid = new byte[CONSTANTS.Numeric.NFC_UID_MAX_LEN.value()];
 		IntByReference nfcUidLen = new IntByReference();
-		LongByReference timeStamp = new LongByReference();
-		String nfcuid = "";
+		LongByReference timeStamp = new LongByReference();		
 		
 		String rteHead = rteListHeader[0] + "\n"
 			           + rteListHeader[1] + "\n"
@@ -116,19 +119,25 @@ public class Rte extends AisWrapper {
 				break;
 			}
 			
-			nfcuid = "";
-			for (int i=0;i<nfcUidLen.getValue();i++)
-				nfcuid += String.format(":%02X", nfcUid[i]);
 			
-			rteRes += String.format(rteFormat, dev.log.index, 
+			for (int i=0;i<nfcUidLen.getValue();i++)
+				nfcuid.append(String.format(":%02X", nfcUid[i]));
+			
+			result.append(String.format(rteFormat, dev.log.index, 
 		               libInstance.dbg_action2str(dev.log.action).getString(0),
 		               dev.log.readerID, dev.log.cardID, dev.log.systemID,		               
 		               "[" + Integer.toString(dev.log.nfcUidLen) + "] |" + nfcuid,
-		               dev.log.timestamp, new Date(dev.log.timestamp).toString()
-		              );
-			res = rteRes + rteListHeader[0] + "\n";
-			rv.ret_string = rteHead + res + String.format("AIS_GetLog() %s\n",  libInstance.dl_status2str(dev.status).getString(0));				
-		}		
+		               dev.log.timestamp, new Date(dev.log.timestamp * 1000).toString())
+					   + "\n"
+					);			
+		}
+		res = result 
+				 // + "\n" 
+				  + rteListHeader[0]
+				  + "\n";
+				  
+		rv.ret_string = rteHead + res + String.format("AIS_GetLog() %s\n",  libInstance.dl_status2str(dev.status).getString(0));
+				
 		return rv;
 	}
 	
