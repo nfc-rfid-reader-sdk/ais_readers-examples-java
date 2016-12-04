@@ -15,10 +15,9 @@ import com.sun.jna.ptr.LongByReference;
  */
 public class Rte extends AisWrapper {
 	
-	
-	private int DL_STATUS;
 	S_PROGRESS progress = new S_PROGRESS();
-	//RetValues rv = new RetValues();
+	private int DL_STATUS;	
+	public int NFC_UID_MAX_LEN = 10;
 	
 	protected String[] rteListHeader = {"---------------------------------------------------------------------------------------------------------------------------------------------",
 			                            "| Idx   |              action              | RD ID | Card ID | JobNr |    NFC [length] : UID    | Time-stamp |       Date - Time            |"
@@ -35,7 +34,7 @@ public class Rte extends AisWrapper {
 		IntByReference logReaderID = new IntByReference();
 		IntByReference logCardID = new IntByReference();
 		IntByReference logSystemID = new IntByReference();
-		byte[] nfcUid = new byte[CONSTANTS.Numeric.NFC_UID_MAX_LEN.value()];
+		byte[] nfcUid = new byte[NFC_UID_MAX_LEN];
 		IntByReference nfcUidLen = new IntByReference();
 		LongByReference timeStamp = new LongByReference();		
 		int rteCount = libInstance.AIS_ReadLog_Count(dev.hnd);
@@ -87,7 +86,7 @@ public class Rte extends AisWrapper {
 		IntByReference logReaderID = new IntByReference();
 		IntByReference logCardID = new IntByReference();
 		IntByReference logSystemID = new IntByReference();
-		byte[] nfcUid = new byte[CONSTANTS.Numeric.NFC_UID_MAX_LEN.value()];
+		byte[] nfcUid = new byte[NFC_UID_MAX_LEN];
 		IntByReference nfcUidLen = new IntByReference();
 		LongByReference timeStamp = new LongByReference();		
 		

@@ -16,6 +16,7 @@ import com.sun.jna.ptr.LongByReference;
 public class UnreadLog extends Rte{
 	
 	private S_DEVICE dev;
+	private int RECORDS_TO_ACK  = 1;
 	
 	UnreadLog(S_DEVICE device){
 		this.dev = device;		
@@ -30,11 +31,11 @@ public class UnreadLog extends Rte{
      String sRteCount = "";         
      int logCount = libInstance.AIS_ReadLog_Count(dev.hnd);
      if (logCount == 0){
-        sLogCount = String.format("\nAIS_ReadLog_Count() %d\n" , logCount);
+        sLogCount = String.format("%nAIS_ReadLog_Count() %d%n" , logCount);
      }
      int rteCount = libInstance.AIS_ReadRTE_Count(dev.hnd);
      if (rteCount == 0){
-    	 sRteCount = String.format("\nAIS_RTELog_Count() %d\n" , rteCount);
+    	 sRteCount = String.format("%nAIS_RTELog_Count() %d%n" , rteCount);
      }
      rv.ret_string = sLogCount + sRteCount;
      return rv;
@@ -47,16 +48,16 @@ public class UnreadLog extends Rte{
     }
     
     protected RetValues AisUnreadLogGet(S_DEVICE dev){
+    	StringBuilder nfcuid = new StringBuilder();  
+    	StringBuilder res = new StringBuilder(); 
     	IntByReference logIndex = new IntByReference();
 		IntByReference logAction = new IntByReference();
 		IntByReference logReaderID = new IntByReference();
 		IntByReference logCardID = new IntByReference();
 		IntByReference logSystemID = new IntByReference();
-		byte[] nfcUid = new byte[CONSTANTS.Numeric.NFC_UID_MAX_LEN.value()];
+		byte[] nfcUid = new byte[NFC_UID_MAX_LEN];
 		IntByReference nfcUidLen = new IntByReference();
-		LongByReference timeStamp = new LongByReference();
-		String nfcuid = "";
-		String res = "";	
+		LongByReference timeStamp = new LongByReference();					
 		dev.status = libInstance.AIS_UnreadLOG_Get(dev.hnd, logIndex, logAction, logReaderID, logCardID, logSystemID, nfcUid, nfcUidLen, timeStamp);
 		
 		if (dev.status !=0){
@@ -64,7 +65,7 @@ public class UnreadLog extends Rte{
 			return rv;			
 		}		
 		for (int i=0;i<nfcUidLen.getValue();i++)
-			nfcuid += String.format(":%02X", nfcUid[i]);
+			nfcuid.append(String.format(":%02X", nfcUid[i]));
 		
 		dev.log.index = logIndex.getValue();
 		dev.log.action = logAction.getValue();
@@ -80,24 +81,24 @@ public class UnreadLog extends Rte{
 		           + rteListHeader[0] + "\n";
 		
 		
-		res +=String.format(rteFormat, dev.log.index, 
+		res.append(String.format(rteFormat, dev.log.index, 
 	               libInstance.dbg_action2str(dev.log.action).getString(0),
 	               dev.log.readerID, dev.log.cardID, dev.log.systemID,		               
 	               "[" + Integer.toString(dev.log.nfcUidLen) + "] " + nfcuid,
 	               dev.log.timestamp, new Date(dev.log.timestamp * 1000).toString()
-	              );
+	              ));
 	    rv.ret_string = rteHead
 	    		      + res + "\n"
 	    		      + rteListHeader[0] + "\n"
-	    		      + String.format("\nAIS_UnreadLOG_Get() %s\n", libInstance.dl_status2str(dev.status).getString(0));
+	    		      + String.format("%nAIS_UnreadLOG_Get() %s%n", libInstance.dl_status2str(dev.status).getString(0));
 	    return rv;			
     }
    
    
   protected RetValues AisUnreadLogAck(S_DEVICE dev){
-	  int recToAck = CONSTANTS.Numeric.RECORDS_TO_ACK.value();
+	  int recToAck = RECORDS_TO_ACK;
 	  dev.status = libInstance.AIS_UnreadLOG_Ack(dev.hnd, recToAck);
-	  rv.ret_string = String.format("\nAIS_UnreadLOG_Ack() %s\n",  libInstance.dl_status2str(dev.status).getString(0));
+	  rv.ret_string = String.format("%nAIS_UnreadLOG_Ack() %s%n",  libInstance.dl_status2str(dev.status).getString(0));
 	  return rv;
   }
     
@@ -105,11 +106,10 @@ public class UnreadLog extends Rte{
     
     
    protected String ShowMeni(){
-	   String meni = "\n 1 : Count | 2 : Get | 3 : Ack | x : Exit "
+	   return "\n 1 : Count | 2 : Get | 3 : Ack | x : Exit "
 			        + "\n--------------------------\n"
 		            + "Press key to select action\n\n";
-	   return  meni;
-	   
+	  	  
    }
    
    @SuppressWarnings("resource")
@@ -138,7 +138,9 @@ public class UnreadLog extends Rte{
    public void AisUnreadLog(){
 	   System.out.println(ShowMeni());
 	   while (true){
-		   if (MeniLoop() !=true) {break;}
+		   if (MeniLoop() !=true) {
+			   break;
+			}
 	   }
    }
 }

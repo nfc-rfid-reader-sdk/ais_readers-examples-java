@@ -14,6 +14,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
+
+import com.sun.istack.internal.logging.Logger;
 import com.sun.jna.Pointer;
 import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.ptr.PointerByReference;
@@ -31,55 +33,49 @@ import rs.dlogic.wrapper.AisWrapper;
 
 public class MyAisWrapper extends AisWrapper {	
 	
-		
-	int DL_STATUS;	
-    //static AisLibrary libInstance;
-    
-    
-    PointerByReference hnd = new PointerByReference();
-	PointerByReference devSerial = new PointerByReference();
-	IntByReference devType = new IntByReference();
-	IntByReference devID = new IntByReference();
-	IntByReference devFW_VER = new IntByReference();
-	IntByReference devCommSpeed = new IntByReference();
-	PointerByReference devFTDI_Serial = new PointerByReference();
-	IntByReference devOpened = new IntByReference();
-	IntByReference devStatus = new IntByReference();
-	IntByReference systemStatus = new IntByReference();
-        
-        
+				
+    S_DEVICE dev = new S_DEVICE();
+    Rte rte = new Rte();
+           
     MyAisWrapper(){
     	libInstance = AisLibrary.aisReaders;
     }
-
-        
-    private static String PASS = CONSTANTS.AlfaNumeric.PASS.strValue();
-    private List<String>myFormats = new ArrayList<String>();
-    private ArrayList<Pointer>HND_LIST = new ArrayList<Pointer>();
-	
+  
 	private Map<String, Boolean> Lights = new HashMap<>();
-	S_DEVICE dev = new S_DEVICE();	
-	Rte rte = new Rte();
+	private List<String>myFormats = new ArrayList<String>();
+    private ArrayList<Pointer>HND_LIST = new ArrayList<Pointer>();
+    
+    private PointerByReference hnd = new PointerByReference();
+	private PointerByReference devSerial = new PointerByReference();
+	private IntByReference devType = new IntByReference();
+	private IntByReference devID = new IntByReference();
+	private IntByReference devFW_VER = new IntByReference();
+	private IntByReference devCommSpeed = new IntByReference();
+	private PointerByReference devFTDI_Serial = new PointerByReference();
+	private IntByReference devOpened = new IntByReference();
+	private IntByReference devStatus = new IntByReference();
+	private IntByReference systemStatus = new IntByReference();
+    
 	
 	
-	
-    //***************************************************************************
+	private int SECONDS         = 10;   
+	private String PASS         = "1111";
+	private int PULSE_DURATION  = 2000;
+    
+	//***************************************************************************
    
     
-   void MyFormats(){
-	   //format_grid
+   void MyFormats(){	   
 	   myFormats.add(0, "---------------------------------------------------------------------------------------------------------------------" );
 	   myFormats.add(1, "| indx|  Reader HANDLE   | SerialNm | Type h/d | ID  | FW   | speed   | FTDI: sn   | opened | DevStatus | SysStatus |" );
-	   myFormats.add(2,"| %3d | %016X | %s | %7d  | %2d  | %d  | %7d | %10s | %5d  | %8d  | %9d |\n");
-	   
+	   myFormats.add(2,"| %3d | %016X | %s | %7d  | %2d  | %d  | %7d | %10s | %5d  | %8d  | %9d |\n");	   
    }
    
    private String ShowMeni(){
-	   String myMeni = "\n--------------------------\n" 
-			   		 
+	   return        "\n--------------------------\n" 			   		 
 			         + "q : List devices\t\t\to : Open device\t\t\t\tc : Close device "
 			         + "\nd : Get devices count\t\t\tt : Get time\t\t\t\tT : Set time"
-			         + "\nr : Real Time Events\t\t\tP : Set application password\t\tp : Change device password"
+			         + "\nr : Real Time Events\t\t\tp : Set application password\t\tP : Change device password"
 			         + "\nl : Get log\t\t\t\tn : Get log by Index\t\t\tN : Get log by Time"
 			         + "\nu : Get unread log\t\t\tw : White-list Read\t\t\tW : White-list Write"
 			         + "\nb : Black-list Read\t\t\tB : Black-list Write\t\t\tL : Test Lights"
@@ -91,14 +87,14 @@ public class MyAisWrapper extends AisWrapper {
 			         + "\n--------------------------\n"
 			         + "Press key to select action\n\n";      
         
-	  return myMeni;
+	  
    }
    
    public void ActiveDevice(S_DEVICE dev, int index)  {
 	try {
 		dev.hnd = HND_LIST.get(index);		  		   		  
 		dev.idx = HND_LIST.indexOf(dev.hnd) + 1;
-		System.out.printf(" dev [%d] | hnd= 0x%X  \n" , dev.idx, dev.hnd.getInt(0));		
+		System.out.printf(" dev [%d] | hnd= 0x%X  %n" , dev.idx, dev.hnd.getInt(0));		
 		
 	} catch (IndexOutOfBoundsException | NullPointerException e) {		
 		System.out.format("Exception: %s",e.toString());
@@ -111,7 +107,7 @@ public class MyAisWrapper extends AisWrapper {
 	   Scanner terminal;
 	   terminal = new Scanner(System.in);	   
 	   String mChar = terminal.nextLine();	 	 
-	   int index = 0;
+	   int index;
 	   if (Character.isDigit(mChar.trim().charAt(0))){		  
 		   index = Integer.parseInt(mChar)-1;
 		   ActiveDevice(dev, index);
@@ -120,7 +116,7 @@ public class MyAisWrapper extends AisWrapper {
 	   }
 	   	   
 	   if (mChar.contains("x")){
-		   System.out.println("APPLICATION EXIT NOW !\n");
+		   System.out.println("\nAPPLICATION EXIT NOW !\n");
 		   terminal.close();
 		   return false;
 	   }	   
@@ -140,11 +136,11 @@ public class MyAisWrapper extends AisWrapper {
 		case "c": 
 			System.out.println(AisClose());
 			break;
-		case "m": 
+		case "m":
 			System.out.print(ShowMeni());
 			break;
 		case "d": //Get devices count
-			System.out.printf("DEVICE COUNT: %d\n" ,AISListUpdateAndGetCount());
+			System.out.printf("DEVICE COUNT: %d%n" ,AISListUpdateAndGetCount());
 			break;
 		case "t":
 			AisGetTime(dev);						
@@ -183,7 +179,7 @@ public class MyAisWrapper extends AisWrapper {
 			AisLockOpen(dev);
 			break;
 		case "r":
-			AisRTEListen(dev, CONSTANTS.Numeric.SECONDS.value());
+			AisRTEListen(dev, SECONDS);
 			break;
 		case "l":
 			System.out.println(AisLogGet(dev));
@@ -204,8 +200,17 @@ public class MyAisWrapper extends AisWrapper {
 			break;
 		case "e":
 			rv = EEUnlock(dev);
-			System.out.println(rv.ret_string);
+			System.out.println(rv.ret_string);			
 			break;
+		case "P":
+			ChangeDevicePass(dev);
+			break;
+		case "p":
+			SetApplicationPass(dev);
+			break;
+		default:
+			System.out.print(ShowMeni());
+			break;				
 		}		  
 	  return true;
    }
@@ -215,7 +220,7 @@ public class MyAisWrapper extends AisWrapper {
     	SimpleDateFormat formatter = new SimpleDateFormat("yyyyMMdd_hhmmss");
     	String localTime = formatter.format(new Date());     	
     	String fileName = String.format("BaseHD-%s-ID%d-%s", dev.devSerial, dev.devID, localTime);    	
-    	String fName="";
+    	String fName;
     	String print = "Read configuration from the device - to the file"
     			     + String.format("%nConfig file - enter for default [%s] : ",fileName);
     	System.out.println(print);    	
@@ -225,17 +230,13 @@ public class MyAisWrapper extends AisWrapper {
     		fName = sscan.trim();
     	}else {
     		fName = fileName;
-    	}
-    	fileName = "";
+    	}    	
     	fileName = fName + ".config";    	
     	System.out.printf("AIS_Config_Read(file: %s)%n", fileName);    	
     	rv = AISConfigFileRead(dev, fileName, PASS);
     	System.out.printf("AIS_Config_Read():%s", libInstance.dl_status2str(rv.dl_status).getString(0));
         
     }
-    
-   
-    
     void AisGetIOState(S_DEVICE dev){    	
     	rv = AISGetIOState(dev);
     	System.out.printf("IO STATE= intercom= %d, door= %d, relay_state= %d : %s%n",
@@ -254,7 +255,7 @@ public class MyAisWrapper extends AisWrapper {
     
     
     void AisLockOpen(S_DEVICE dev){    	    	
-    	int pulseDuration = CONSTANTS.Numeric.PULSE_DURATION.value(); 
+    	int pulseDuration = PULSE_DURATION; 
     	rv = AISLockOpen(dev, pulseDuration);
     	System.out.printf("AIS_LockOpen(pulse_duration= %d ms) : %s%n", 
     			         pulseDuration, libInstance.dl_status2str(rv.dl_status).getString(0));
@@ -262,20 +263,22 @@ public class MyAisWrapper extends AisWrapper {
     
     
     
-    String AisOpen(){       
+    String AisOpen(){
+       int dlstatus; 
  	   StringBuilder out = new StringBuilder();  	    	  
  	   for (Pointer hnd : HND_LIST){		   		   		  
- 		   DL_STATUS = libInstance.AIS_Open(hnd); 		  
- 		   out.append(String.format("AIS_Open(0x%X):%s%n", hnd.getInt(0), libInstance.dl_status2str(DL_STATUS).getString(0)));		   
+ 		   dlstatus = libInstance.AIS_Open(hnd); 		  
+ 		   out.append(String.format("AIS_Open(0x%X):%s%n", hnd.getInt(0), libInstance.dl_status2str(dlstatus).getString(0)));		   
  	   } 	   
  	   return out.toString(); 
     }
     
     String AisClose(){
+       int dlstatus; 	
        StringBuilder out = new StringBuilder(); 
  	   for (Pointer hnd : HND_LIST){
- 		   DL_STATUS = libInstance.AIS_Close(hnd);		   
- 		   out.append(String.format("AIS_Close(0x%X):%s%n", hnd.getInt(0), libInstance.dl_status2str(DL_STATUS).getString(0))); 				                       	  
+ 		   dlstatus = libInstance.AIS_Close(hnd);		   
+ 		   out.append(String.format("AIS_Close(0x%X):%s%n", hnd.getInt(0), libInstance.dl_status2str(dlstatus).getString(0))); 				                       	  
  	   }
  	   return out.toString();
     }
@@ -585,7 +588,7 @@ public class MyAisWrapper extends AisWrapper {
 	}
 	
 	public String AisLogGet(S_DEVICE dev){				
-		byte[] pass = CONSTANTS.AlfaNumeric.PASS.strValue().getBytes();
+		byte[] pass = PASS.getBytes();
 		dev.status = libInstance.AIS_GetLog(dev.hnd, pass);
 		
 		if (dev.status !=0){
@@ -604,14 +607,14 @@ public class MyAisWrapper extends AisWrapper {
 	
 	
 	@SuppressWarnings("resource")
-	public String AisLogByIndex(S_DEVICE dev){				
+	public String AisLogByIndex(S_DEVICE dev){	
+		byte[] pass = PASS.getBytes();
 		Scanner inIndex = new Scanner(System.in);
 		System.out.println("#=- Print log by index -=#");
 		System.out.print("Enter index start: ");				
 		int startIndex = inIndex.nextInt();
 		System.out.print("Enter index end  : ");
-		int endIndex = inIndex.nextInt();				
-		byte[] pass = CONSTANTS.AlfaNumeric.PASS.strValue().getBytes();
+		int endIndex = inIndex.nextInt();						
 		dev.status = libInstance.AIS_GetLogByIndex(dev.hnd, pass, startIndex, endIndex);
 		String fOut = String.format("AIS_GetLogByIndex:(pass: %s [ %d - %d ] >> %s)%n", new String(pass), startIndex, endIndex, libInstance.dl_status2str(dev.status).getString(0));
 		
@@ -631,7 +634,7 @@ public class MyAisWrapper extends AisWrapper {
 		int startTime = inIndex.nextInt();
 		System.out.print("Enter time-stamp end  : ");
 		int endTime = inIndex.nextInt();				
-		byte[] pass = CONSTANTS.AlfaNumeric.PASS.strValue().getBytes();
+		byte[] pass = PASS.getBytes();
 		dev.status = libInstance.AIS_GetLogByTime(dev.hnd, pass, startTime, endTime);
 		String fOut = String.format("AIS_GetLogByTime:(pass: %s [ %d - %d ] >> %s)%n", new String(pass), startTime, endTime, libInstance.dl_status2str(dev.status).getString(0));
 		
@@ -643,30 +646,63 @@ public class MyAisWrapper extends AisWrapper {
 		return  fOut + rv ;			  			
 	}
 	
-  public RetValues EELock(S_DEVICE dev){
-	  byte[]PASS = CONSTANTS.AlfaNumeric.PASS.strValue().getBytes();
-	  //String PASS = CONSTANTS.AlfaNumeric.PASS.strValue();
-	  dev.status = libInstance.AIS_EE_WriteProtect(dev.hnd, PASS);
+  public RetValues EELock(S_DEVICE dev){	  
+	  byte[]pass = PASS.getBytes();	  
+	  dev.status = libInstance.AIS_EE_WriteProtect(dev.hnd, pass);
 	  rv.ret_string = String.format("EEPROM Lock - AIS_EE_WriteProtect() %s", libInstance.dl_status2str(dev.status).getString(0));
 	  return rv;
   }
 	
   public RetValues EEUnlock(S_DEVICE dev){
-	  byte[]PASS = CONSTANTS.AlfaNumeric.PASS.strValue().getBytes();
-	  //String PASS = CONSTANTS.AlfaNumeric.PASS.strValue();
-	  dev.status = libInstance.AIS_EE_WriteUnProtect(dev.hnd, PASS);
+	  byte[]pass = PASS.getBytes();	 
+	  dev.status = libInstance.AIS_EE_WriteUnProtect(dev.hnd, pass);
 	  rv.ret_string = String.format("EEPROM Lock - AIS_EE_WriteUnProtect() %s", libInstance.dl_status2str(dev.status).getString(0));
 	  return rv;
 	  
   }
   
-
+  @SuppressWarnings("resource")
+  public void SetApplicationPass(S_DEVICE dev){
+	  Scanner scan = new Scanner(System.in);
+	  System.out.printf("%nOld password is actual application password: %s%n", PASS);
+	  System.out.print("Enter new password for units ( and application ): ");
+	  String newPass = scan.nextLine();
+	  if (newPass.length() == 0){
+		  System.out.println("Patch - new pass = default pass");
+		  newPass = PASS;
+	  }
+	  System.out.printf("Try set new password for units= %s%n", newPass);
+	  dev.status = libInstance.AIS_ChangePassword(dev.hnd, PASS.getBytes(), newPass.getBytes());
+	  if (dev.status == 0){
+		  PASS = newPass;
+		  System.out.printf("New default application password = %s%n", PASS);		  
+	  }	  
+	  System.out.printf("AIS_ChangePassword (old pass= %s new pass= %s |%s%n" , PASS,newPass,libInstance.dl_status2str(dev.status).getString(0));	  	  
+  }
+  
+  @SuppressWarnings("resource")
+  public void ChangeDevicePass(S_DEVICE dev){
+	  Scanner scan = new Scanner(System.in);
+	  System.out.printf("%nActual application password is :%s%n", PASS);
+	  System.out.print("Enter new default application password : ");
+	  String newPass = scan.nextLine();
+	  if (newPass.length() == 0){
+		  System.out.println("Patch - new pass = default pass");
+		  newPass = PASS;
+	  }
+	  PASS = newPass;
+	  System.out.printf("%nNew default application password = %s%n", PASS);
+  }
+  
+  
+  
+  
  //************************************************************************
 	void listDevices(){    	
     	prepareListForCheck();
     	System.out.println("checking...please wait...");
     	int devCount = AISListUpdateAndGetCount();    	    
-    	System.out.printf("AIS_List_UpdateAndGetCount()= [%d]\n", devCount); 
+    	System.out.printf("AIS_List_UpdateAndGetCount()= [%d]%n", devCount); 
     	if (devCount >0){
     		AISGetListInformation();
     	}else
@@ -680,34 +716,37 @@ public class MyAisWrapper extends AisWrapper {
     	String devTypeStr;
     	File f = new File(fileName);
     	int addedDevType = 0;
-    	int devId;
-    	
+    	int devId;    	
     	IntByReference devTypeEnum = new IntByReference();
         if (!f.exists()){
         	System.out.printf("File <%s> not found. %n",fileName);
         	return false;
         }
+        
         try {        	
 			BufferedReader reader = new BufferedReader(new FileReader(fileName));
 			String line;
 			while ((line = reader.readLine()) !=null)
-			{				
-				if (line.startsWith("#")) 
-					continue;							    
-					String []linePart = line.trim().split(":");
-					if (linePart.length <= 1) 
-						continue;
-					   devTypeStr = linePart[0];
-					   devId = Integer.parseInt(linePart[1]);					 
-					   DL_STATUS = libInstance.device_type_str2enum(devTypeStr, devTypeEnum);
-					   if (addDevice(devTypeEnum.getValue(), devId) == 0){
-						  addedDevType ++;
-			}
-		  }	
-		 reader.close();
+			{
+				String []linePart = line.trim().split(":");
+				if (line.startsWith("#") || (linePart.length <= 1)){ 
+					continue;				
+				}
+//				
+//				if (linePart.length <= 1){ 
+//					continue;
+//				}
+			   devTypeStr = linePart[0];
+			   devId = Integer.parseInt(linePart[1]);					 
+			   libInstance.device_type_str2enum(devTypeStr, devTypeEnum);
+			   if (addDevice(devTypeEnum.getValue(), devId) == 0){
+				  addedDevType ++;
+			   }
+		   }				
+		   reader.close();
 		} catch (IOException e) {			
 			e.printStackTrace();
-		}		
+		}
         if (addedDevType > 0){
 			return true;
 		}else{
@@ -722,6 +761,7 @@ public class MyAisWrapper extends AisWrapper {
     	PointerByReference dev_type_str = new PointerByReference();
     	int deviceType;
     	int deviceId;    	
+    	int dlstatus;
     	getDevices = AISGetDevicesForCheck();
     	if (getDevices.length() == 0)
     	   {return;}        
@@ -730,7 +770,7 @@ public class MyAisWrapper extends AisWrapper {
     	  String[] t = item.split(":");
     	  deviceType = Integer.parseInt(t[0]);
     	  deviceId = Integer.parseInt(t[1]);    	 
-    	  DL_STATUS = libInstance.device_type_enum2str(deviceType, dev_type_str);    	  
+    	  dlstatus = libInstance.device_type_enum2str(deviceType, dev_type_str);    	  
     	  System.out.printf("     %20s (enum= %d) on ID %d%n", dev_type_str.getValue().getString(0), deviceType, deviceId);     	 
     	}    	    	    
     }
@@ -751,12 +791,13 @@ public class MyAisWrapper extends AisWrapper {
     }
    
     int addDevice(int deviceType, int deviceId){
-    	String fOut = "";
-    	DL_STATUS = AISListAddDeviceForCheck(deviceType, deviceId);
+    	String fOut;
+    	int dlstatus;
+    	dlstatus = AISListAddDeviceForCheck(deviceType, deviceId);
     	fOut = String.format("AIS_List_AddDeviceForCheck(type: %d, id: %d)> { %s }", 
-    			                 deviceType, deviceId, libInstance.dl_status2str(DL_STATUS).getString(0));
+    			                 deviceType, deviceId, libInstance.dl_status2str(dlstatus).getString(0));
     	System.out.println(fOut);
-    	return DL_STATUS;
+    	return dlstatus;
     }
     
     void ListEraseAllDevicesForCheck(){
@@ -769,9 +810,10 @@ public class MyAisWrapper extends AisWrapper {
     }
     
     void ListAddDeviceForCheck(int deviceType, int deviceId){
-    	String fOut ="";
-    	DL_STATUS =  AISListAddDeviceForCheck(deviceType, deviceId);
-    	fOut = String.format("AIS_List_AddDeviceForCheck()>> deviceType: %d : deviceId: %d |DL_STATUS: %d", deviceType, deviceId, DL_STATUS);
+    	int dlstatus;
+    	String fOut;
+    	dlstatus =  AISListAddDeviceForCheck(deviceType, deviceId);
+    	fOut = String.format("AIS_List_AddDeviceForCheck()>> deviceType: %d : deviceId: %d |DL_STATUS: %d", deviceType, deviceId, dlstatus);
     	System.out.println(fOut);
     }
     
@@ -780,6 +822,7 @@ public class MyAisWrapper extends AisWrapper {
 	void AISGetListInformation(){    	    			
 		StringBuilder result = new StringBuilder();
 		String res;
+		int dlstatus;
 		int devCount = AISListUpdateAndGetCount();
     	if (devCount <= 0) {
     		return;
@@ -788,24 +831,8 @@ public class MyAisWrapper extends AisWrapper {
     	{    		
 	    	HND_LIST.clear();	    
 	    	for (int i = 0;i<devCount;i++)
-	    	{
-	    		/*
-	    		PointerByReference hnd = new PointerByReference();
-	    		PointerByReference devSerial = new PointerByReference();
-	    		IntByReference devType = new IntByReference();
-	    		IntByReference devID = new IntByReference();
-	    		IntByReference devFW_VER = new IntByReference();
-	    		IntByReference devCommSpeed = new IntByReference();
-	    	    byte[]devFTDI_Serial = new byte[9];
-	    		IntByReference devOpened = new IntByReference();
-	    		IntByReference devStatus = new IntByReference();
-	    		IntByReference systemStatus = new IntByReference();
-	    		*/
-	    		
-	    		
-	    		
-	    		
-	    		DL_STATUS = libInstance.AIS_List_GetInformation(hnd, 
+	    	{	    		    		
+	    		dlstatus = libInstance.AIS_List_GetInformation(hnd, 
 	    				                                        devSerial, 
 	    				                                        devType, 
 	    				                                        devID,
@@ -815,8 +842,9 @@ public class MyAisWrapper extends AisWrapper {
 	    				                                        devOpened, 
 	    				                                        devStatus, 
 	    				                                        systemStatus);
-	    		if (DL_STATUS !=0) 
+	    		if (dlstatus !=0){ 
 	    			return;    		
+	    		}
 	    		HND_LIST.add(hnd.getValue());    		
 	    		AisOpen();
 	    		dev.idx = 1;
