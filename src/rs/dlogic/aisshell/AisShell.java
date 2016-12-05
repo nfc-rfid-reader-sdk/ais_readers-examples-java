@@ -1,7 +1,7 @@
 /**
  * 
  */
-package rs.dlogic.wrapper;
+package rs.dlogic.aisshell;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -9,17 +9,22 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 
-import com.sun.istack.internal.logging.Logger;
 import com.sun.jna.Pointer;
 import com.sun.jna.ptr.IntByReference;
+import com.sun.jna.ptr.LongByReference;
 import com.sun.jna.ptr.PointerByReference;
-import rs.dlogic.wrapper.AisWrapper;
+
+import rs.dlogic.aiswrapper.AisWrapper;
+import rs.dlogic.aiswrapper.E_KNOWN_DEVICE_TYPES;
+import rs.dlogic.aiswrapper.AisWrapper.RetValues;
+import rs.dlogic.aiswrapper.AisWrapper.S_DEVICE;
 
 
 
@@ -29,15 +34,13 @@ import rs.dlogic.wrapper.AisWrapper;
  */
 
 
-
-
-public class MyAisWrapper extends AisWrapper {	
+public class AisShell extends AisWrapper {	
 	
-				
+	S_PROGRESS progress = new S_PROGRESS();
     S_DEVICE dev = new S_DEVICE();
-    Rte rte = new Rte();
-           
-    MyAisWrapper(){
+    RetValues rv = new RetValues();
+    
+    AisShell(){
     	libInstance = AisLibrary.aisReaders;
     }
   
@@ -57,19 +60,36 @@ public class MyAisWrapper extends AisWrapper {
 	private IntByReference systemStatus = new IntByReference();
     
 	
-	
-	private int SECONDS         = 10;   
 	private String PASS         = "1111";
+	private int SECONDS         = 10;   	
 	private int PULSE_DURATION  = 2000;
-    
-	//***************************************************************************
+	private int RECORDS_TO_ACK  = 1;
+	
+	private static final String GREEN_MASTER = "green_master";
+	private static final String RED_MASTER = "red_master";
+	private static final String GREEN_SLAVE = "green_slave";
+	private static final String RED_SLAVE = "red_slave";
    
     
-   void MyFormats(){	   
+   private void MyFormats(){	   
 	   myFormats.add(0, "---------------------------------------------------------------------------------------------------------------------" );
 	   myFormats.add(1, "| indx|  Reader HANDLE   | SerialNm | Type h/d | ID  | FW   | speed   | FTDI: sn   | opened | DevStatus | SysStatus |" );
 	   myFormats.add(2,"| %3d | %016X | %s | %7d  | %2d  | %d  | %7d | %10s | %5d  | %8d  | %9d |\n");	   
    }
+   
+   private String rteFormat = "| %5d | %32s | %5d | %7d | %5d | %24s | %10d | %s | ";
+	
+   private String[] rteListHeader = {"---------------------------------------------------------------------------------------------------------------------------------------------",
+  	           "| Idx   |              action              | RD ID | Card ID | JobNr |    NFC [length] : UID    | Time-stamp |       Date - Time            |"
+  	};  
+
+  
+   
+   String rteHead = rteListHeader[0] + "\n"
+                  + rteListHeader[1] + "\n"
+                  + rteListHeader[0] + "\n";
+   
+   
    
    private String ShowMeni(){
 	   return        "\n--------------------------\n" 			   		 
@@ -90,7 +110,7 @@ public class MyAisWrapper extends AisWrapper {
 	  
    }
    
-   public void ActiveDevice(S_DEVICE dev, int index)  {
+   private void ActiveDevice(AisWrapper.S_DEVICE dev, int index)  {
 	try {
 		dev.hnd = HND_LIST.get(index);		  		   		  
 		dev.idx = HND_LIST.indexOf(dev.hnd) + 1;
@@ -123,76 +143,78 @@ public class MyAisWrapper extends AisWrapper {
 	   switch (mChar) 
 	   {
 		case "o":
-			System.out.println(AisOpen());
+			System.out.println(Open());
 			break;
 		case "q":
-			AISGetListInformation();
+			GetListInformation();
 			break;
 		case "i":
-		     AisGetVersion(dev);
-		     AisGetTime(dev);
+		     GetVersion(dev);
+		     GetTime(dev);
 		     System.out.println(libInstance.sys_get_timezone_info().getString(0));
 		     break;
 		case "c": 
-			System.out.println(AisClose());
+			System.out.println(Close());
 			break;
 		case "m":
 			System.out.print(ShowMeni());
 			break;
 		case "d": //Get devices count
-			System.out.printf("DEVICE COUNT: %d%n" ,AISListUpdateAndGetCount());
+			System.out.printf("DEVICE COUNT: %d%n" ,AisWrappListUpdateAndGetCount());
 			break;
 		case "t":
-			AisGetTime(dev);						
+			GetTime(dev);						
 			break;
 		case "T":
-			AisSetTime(dev);
+			SetTime(dev);
 			break;
 		case "b": //Black_list read
-			AisBlackListRead(dev);
+			BlackListRead(dev);
 			break;
 		case "B":
-			AisBlackListWrite(dev);
+			BlackListWrite(dev);
 			break;
 		case "w": //White list read
-			AisWhiteListRead(dev);
+			WhiteListRead(dev);
 			break;
 		case "W":
-			AisWhiteListWrite(dev);
+			WhiteListWrite(dev);
 			break;
 		case "L":
-			AisTestLights(dev);
+			TestLights(dev);
 			break;
-		case "Q": //Edit device list for checking
-			AisEditDeviceListForChecking();
+		case "Q": 
+			EditDeviceListForChecking();
 			break;
 		case "s" :
-			AisConfigFileRead(dev);
+			ConfigFileRead(dev);
+			break;
+		case "S":
+			ConfigFileWrite(dev);
 			break;
 		case "g":
-			AisGetIOState(dev);
+			GetIOState(dev);
 			break;
 		case "y":
-			AisRelayToogle(dev);
+			RelayToogle(dev);
 			break;
 		case "G":
-			AisLockOpen(dev);
+			LockOpen(dev);
 			break;
 		case "r":
-			AisRTEListen(dev, SECONDS);
+			RTEListen(dev, SECONDS);
 			break;
 		case "l":
-			System.out.println(AisLogGet(dev));
+			System.out.println(LogGet(dev));
 			break;
 		case "n":
-		    System.out.println(AisLogByIndex(dev));
+		    System.out.println(LogByIndex(dev));
 		    break;
 		case "N":
-			System.out.println(AisLogByTime(dev));
+			System.out.println(LogByTime(dev));
 			break;
-		case "u":
-			UnreadLog ulog = new UnreadLog(dev);
-			ulog.AisUnreadLog();
+		case "u":			
+			UnreadLog();
 			break;
 		case "E":
 			rv = EELock(dev);
@@ -216,7 +238,7 @@ public class MyAisWrapper extends AisWrapper {
    }
    
     @SuppressWarnings("resource")
-    void AisConfigFileRead(S_DEVICE dev){    	
+    public void ConfigFileRead(S_DEVICE dev){    	
     	SimpleDateFormat formatter = new SimpleDateFormat("yyyyMMdd_hhmmss");
     	String localTime = formatter.format(new Date());     	
     	String fileName = String.format("BaseHD-%s-ID%d-%s", dev.devSerial, dev.devID, localTime);    	
@@ -233,37 +255,57 @@ public class MyAisWrapper extends AisWrapper {
     	}    	
     	fileName = fName + ".config";    	
     	System.out.printf("AIS_Config_Read(file: %s)%n", fileName);    	
-    	rv = AISConfigFileRead(dev, fileName, PASS);
+    	rv = AisWrappConfigFileRead(dev, fileName, PASS);
     	System.out.printf("AIS_Config_Read():%s", libInstance.dl_status2str(rv.dl_status).getString(0));
         
     }
-    void AisGetIOState(S_DEVICE dev){    	
-    	rv = AISGetIOState(dev);
+    
+    @SuppressWarnings("resource")
+    public void ConfigFileWrite(S_DEVICE dev){
+    	String fileName = "BaseHD-xxx.config";
+    	String fName;
+    	System.out.printf("%nStore configuration from file to the device%nConfig file - enter for default [%s] : ", fileName);
+    	Scanner scan = new Scanner(System.in);
+    	String sscan = scan.nextLine();    	
+    	if (sscan.length()!= 0){    		
+    		fName = sscan.trim();
+    	}else {
+    		fName = fileName;
+    	}
+    	fileName = fName;
+    	System.out.printf("AIS_Config_Send(file: %s)%n", fileName);
+    	rv = AisWrappConfigFileWrite(dev, fileName);
+    	System.out.printf("AIS_Config_Send():%s", libInstance.dl_status2str(rv.dl_status).getString(0));
+    }
+    
+    
+    
+    
+    public void GetIOState(S_DEVICE dev){    	
+    	rv = AisWrappGetIOState(dev);
     	System.out.printf("IO STATE= intercom= %d, door= %d, relay_state= %d : %s%n",
     			         rv.intercom, rv.door, rv.relay_state, libInstance.dl_status2str(rv.dl_status).getString(0));
     	
     }
     
-   
-    
-    void AisRelayToogle(S_DEVICE dev){    	
-    	rv = AISRelayToogle(dev);
+    public void RelayToogle(S_DEVICE dev){    	
+    	rv = AisWrappRelayToogle(dev);
     	System.out.printf("AIS_RelayStateSet(RELAY= %d) : %s%n", rv.relay_state, 
     			         libInstance.dl_status2str(rv.dl_status).getString(0));
     }
     
     
     
-    void AisLockOpen(S_DEVICE dev){    	    	
+    public void LockOpen(S_DEVICE dev){    	    	
     	int pulseDuration = PULSE_DURATION; 
-    	rv = AISLockOpen(dev, pulseDuration);
+    	rv = AisWrappLockOpen(dev, pulseDuration);
     	System.out.printf("AIS_LockOpen(pulse_duration= %d ms) : %s%n", 
     			         pulseDuration, libInstance.dl_status2str(rv.dl_status).getString(0));
     }
     
     
     
-    String AisOpen(){
+    public String Open(){
        int dlstatus; 
  	   StringBuilder out = new StringBuilder();  	    	  
  	   for (Pointer hnd : HND_LIST){		   		   		  
@@ -273,7 +315,7 @@ public class MyAisWrapper extends AisWrapper {
  	   return out.toString(); 
     }
     
-    String AisClose(){
+    String Close(){
        int dlstatus; 	
        StringBuilder out = new StringBuilder(); 
  	   for (Pointer hnd : HND_LIST){
@@ -284,10 +326,10 @@ public class MyAisWrapper extends AisWrapper {
     }
    
 
-    void AisGetTime(S_DEVICE dev){
+    public void GetTime(S_DEVICE dev){
     	String fOut;    	    	    	    	
-    	rv = AISGetTime(dev.hnd);    	    	    
-    	fOut = String.format("AIS_GetTime(dev[%d] hnd=0x%X):%s > (currentTime= %d | tz= %d | dst= %d | offset= %d): %s%n",
+    	rv = AisWrappGetTime(dev.hnd);    	    	    
+    	fOut = String.format("%nAIS_GetTime(dev[%d] hnd=0x%X):%s > (currentTime= %d | tz= %d | dst= %d | offset= %d): %s%n",
     			              dev.idx, dev.hnd.getInt(0), libInstance.dl_status2str(rv.dl_status).getString(0), rv.currentTime, rv.timezone, rv.DST, rv.offset,
     			               new Date(rv.currentTime).toString() 
     			               );    	    	   
@@ -295,9 +337,9 @@ public class MyAisWrapper extends AisWrapper {
     }
     
   
-    void AisSetTime(S_DEVICE dev){
+    void SetTime(S_DEVICE dev){
     	String fOut;    	    	    	    	
-    	rv = AISSetTime(dev.hnd, PASS);    	    	    
+    	rv = AisWrappSetTime(dev.hnd, PASS);    	    	    
     	fOut = String.format("%nAIS_SetTime(dev[%d] hnd=0x%X) %s > (currentTime= %d | tz= %d | dst= %d | offset= %d): %s%n",
     			               dev.idx, dev.hnd.getInt(0), libInstance.dl_status2str(rv.dl_status).getString(0), rv.currentTime, rv.timezone, rv.DST, rv.offset,
     			               new Date(rv.currentTime).toString()
@@ -307,67 +349,67 @@ public class MyAisWrapper extends AisWrapper {
    
     
     
-    void AisBlackListRead(S_DEVICE dev){
+    public void BlackListRead(S_DEVICE dev){
     	String fOut;    	    	    	    	
-    	rv = AISBlackListRead(dev, PASS);    	
+    	rv = AisWrappBlackListRead(dev, PASS);    	
     	fOut = String.format("%nAIS_Blacklist_Read() > black_list(size= %d | %s) > %s%n" ,
     			             rv.listSize, rv.strList, libInstance.dl_status2str(rv.dl_status).getString(0) );
     	System.out.println(fOut);
     }
    
     @SuppressWarnings("resource")
-    void AisBlackListWrite(S_DEVICE dev){
+    public void BlackListWrite(S_DEVICE dev){
     	String fOut;    	    	    	    
 		Scanner inputBL = new Scanner(System.in);
     	String sBuffer =  "=- Write Black List -=\n"
     					+ "Try to write black-list decimal numbers (delimited with anything)\n"
     			        + "eg. 2, 102 250;11\n";
     	System.out.print(sBuffer + "\nEnter black list:");    	    	   
-    	rv = AISBlackListWrite(dev, PASS, inputBL.nextLine());
+    	rv = AisWrappBlackListWrite(dev, PASS, inputBL.nextLine());
     	fOut = String.format("%nAIS_Blacklist_Write():black_list= %s > %s%n" , rv.strList, libInstance.dl_status2str(rv.dl_status).getString(0));
         System.out.println(fOut); 
-        inputBL.close();
+        
     }
     
   
-    void AisWhiteListRead(S_DEVICE dev) 
+    public void WhiteListRead(S_DEVICE dev) 
     {
     	String fOut;    	    	    	   
-    	rv = AISWhiteListRead(dev, PASS);    	
+    	rv = AisWrappWhiteListRead(dev, PASS);    	
     	fOut = String.format("%nAIS_Whitelist_Read() > white_list(size= %d | %s) > %s%n" ,
     			             rv.listSize, rv.strList, libInstance.dl_status2str(rv.dl_status).getString(0) );
     	System.out.println(fOut); 	
     }
     
     @SuppressWarnings ("resource")
-    void AisWhiteListWrite(S_DEVICE dev){
+    void WhiteListWrite(S_DEVICE dev){
     	String fOut;    	    	    	
     	Scanner inputBL = new Scanner(System.in);
     	String sBuffer =  "=- Write White List -=\n"
     					+ "Enter white-list UIDs (in HEX format delimited with '.' or ':' or not)\n"
     			        + "Each UID separate by ',' or space eg. 37:0C:96:69,C2.66.EF.95 01234567\n";
     	System.out.print(sBuffer + "\nEnter white list:");    	    	   
-    	rv = AISWhiteListWrite(dev, PASS, inputBL.nextLine());
+    	rv = AisWrappWhiteListWrite(dev, PASS, inputBL.nextLine());
     	fOut = String.format("%nAIS_Whitelist_Write():white_list= %s > %s%n" , rv.strList, libInstance.dl_status2str(rv.dl_status).getString(0));
         System.out.println(fOut);        
     }
      
     
     private void CleanMapLights(){    	
-   	    Lights.put("green_master", false);
-   	    Lights.put("red_master", false);
-   	    Lights.put("green_slave", false);
-   	    Lights.put("red_slave", false);     	  
+   	    Lights.put(GREEN_MASTER, false);
+   	    Lights.put(RED_MASTER, false);
+   	    Lights.put(GREEN_SLAVE, false);
+   	    Lights.put(RED_SLAVE, false);     	  
     }
     
     
     
 	@SuppressWarnings("resource")
-	void AisTestLights(S_DEVICE dev){
+	public void TestLights(S_DEVICE dev){
     	String lightMeni = "\tg : green master | r : red master | G : green slave | R : red slave  || x : exit \n"
     			         + "\t-----------------";
     	System.out.println(lightMeni);     	
-    	String fOut;    	
+    	    	
     	Scanner s;
     	s = new Scanner(System.in);
    	    Boolean print = false;   	   
@@ -376,30 +418,30 @@ public class MyAisWrapper extends AisWrapper {
     		     		 
     		 String choise = s.nextLine();    		     		     		 
     		 if (choise.contains("g")){    			 
-    			 Lights.replace("green_master", true);
+    			 Lights.replace(GREEN_MASTER, true);
     			 print = true;    			 
     			}
     		 if (choise.contains("r")){    			 
-    			 Lights.replace("red_master", true);
+    			 Lights.replace(RED_MASTER, true);
     			 print = true;   			 
     		 }
     		 if (choise.contains("G")){    			 
-    			 Lights.replace("green_slave", true);
+    			 Lights.replace(GREEN_SLAVE, true);
     			 print = true;     			 }
     		 if (choise.contains("R")){
-    			 Lights.replace("red_slave", true);
+    			 Lights.replace(RED_SLAVE, true);
     			 print = true;     			 }
     		 if (choise.contains("x")) {
     			 break;    			    			    		
     			 } 
     		
     		 if (print){    			 
-    			int greenMaster = Lights.get("green_master") ? 1:0;
-    			int redMaster = Lights.get("red_master") ? 1:0;
-    			int greenSlave = Lights.get("green_slave") ? 1:0;
-    			int redSlave = Lights.get("red_slave") ? 1:0;
-    			rv = AISTestLights(dev, greenMaster, redMaster, greenSlave, redSlave);
-    			fOut = String.format("%nAIS_LightControl(master:green= %d | master:red= %d || slave:green= %d | slave:sred= %d) > %s", 
+    			int greenMaster = Lights.get(GREEN_MASTER) ? 1:0;
+    			int redMaster = Lights.get(RED_MASTER) ? 1:0;
+    			int greenSlave = Lights.get(GREEN_SLAVE) ? 1:0;
+    			int redSlave = Lights.get(RED_SLAVE) ? 1:0;
+    			rv = AisWrappTestLights(dev, greenMaster, redMaster, greenSlave, redSlave);
+    			String fOut = String.format("%nAIS_LightControl(master:green= %d | master:red= %d || slave:green= %d | slave:sred= %d) > %s", 
     					              greenMaster, redMaster, greenSlave, redSlave, libInstance.dl_status2str(rv.dl_status).getString(0));
     			System.out.println(fOut);
     			CleanMapLights();
@@ -410,8 +452,8 @@ public class MyAisWrapper extends AisWrapper {
 
 	
 	
-//Q - EditDeviceListForChecking
-	String PrintAvailableDevices(){		
+
+	public String PrintAvailableDevices(){		
 		PointerByReference devName =  new PointerByReference();
 		PointerByReference devDescript = new PointerByReference();
 		IntByReference hwType = new IntByReference(0);
@@ -426,7 +468,7 @@ public class MyAisWrapper extends AisWrapper {
 			   grid_1 = "------------+-----------------+------------------------------------\n";	
 		
 	    String header = grid_0 + "Look at ais_readers_list.h for Device enumeration\n"
-	                   + String.format("Known devices ( supported by %s )%n", AISGetLibraryVersionStr())
+	                   + String.format("Known devices ( supported by %s )%n", AisWrappGetLibraryVersionStr())
 	                   + grid_0 + " Dev.type   |   Short  name   | Long name\n"
 	                   + grid_1;
 	    
@@ -450,7 +492,7 @@ public class MyAisWrapper extends AisWrapper {
 	
 	}
     
-	String ShowActualList(){
+	public String ShowActualList(){
 		PointerByReference devName =  new PointerByReference();
 		PointerByReference devDescript = new PointerByReference();
 		IntByReference hwType = new IntByReference(0);
@@ -469,7 +511,7 @@ public class MyAisWrapper extends AisWrapper {
 				      + grid_1;
 	   
 		
-		String getDev = AISGetDevicesForCheck();
+		String getDev = AisWrappGetDevicesForCheck();
 	    System.out.println(header);
 	    
 		for (String item : getDev.split("\n")) {
@@ -486,7 +528,7 @@ public class MyAisWrapper extends AisWrapper {
 	}
 
 	@SuppressWarnings ("resource")
-	int [] DevInput(){		
+	public int [] DevInput(){		
 		int maxDev = E_KNOWN_DEVICE_TYPES.DL_AIS_SYSTEM_TYPES_COUNT.value();
 		System.out.println("Enter device type and then enter device BUS ID for check");
 		int[]devInput = new int[2];
@@ -508,12 +550,11 @@ public class MyAisWrapper extends AisWrapper {
 			if (scan.contains("N") || scan.contains("n")){
 				break;
 				}
-		}
-		//in.close();
+		}		
 		return devInput;		
 	}
 	
-	String ShowResult(String funName,int devType, int devId){
+	public String ShowResult(String funName,int devType, int devId){
 		int status = 0;
 		switch (funName){
 		case "AIS_List_AddDeviceForCheck()":
@@ -525,12 +566,12 @@ public class MyAisWrapper extends AisWrapper {
 		}
 		return String.format("%s(type: %d, id: %d)> %s %n", funName, devType, devId,
 				libInstance.dl_status2str(status).getString(0)) + "Finish list edit.\n"
-				+ String.format("AFTER UPDATE CYCLE %n%s", AISGetDevicesForCheck());
+				+ String.format("AFTER UPDATE CYCLE %n%s", AisWrappGetDevicesForCheck());
 		
 	}
 	
 	@SuppressWarnings("resource")
-	void AisEditDeviceListForChecking(){
+	public void EditDeviceListForChecking(){
 		Scanner scan;		
 		int deviceType,deviceID;
 		String meni = "\n\t1 : show known device types"
@@ -559,7 +600,7 @@ public class MyAisWrapper extends AisWrapper {
 				System.out.println(ShowActualList());
 				}
 			if (choise.contains("3")){				
-				AISListEraseAllDeviceForCheck();
+				AisWrappListEraseAllDeviceForCheck();
 				System.out.println("Clear list for checking !");
 			}
 			if (choise.contains("4")){					
@@ -576,38 +617,40 @@ public class MyAisWrapper extends AisWrapper {
 	}
 
  
-	public void AisRTEListen(S_DEVICE dev, int maxSec){				
-		long stopTime = new Date(System.currentTimeMillis() + ((maxSec*90)*10)).getTime();			
+	public void RTEListen(S_DEVICE dev, int maxSec){				
+		long stopTime = new Date(System.currentTimeMillis() + ((maxSec*90)*10)).getTime();	
+		System.out.printf("Wait for RTE for %ds...%n", maxSec);
 		while (new Date(System.currentTimeMillis()).getTime()<= stopTime){			
 			for (Pointer hnd : HND_LIST){
 				dev.hnd = hnd;
-				rte.AISMainLoop(dev);
+				MainLoop(dev);
 			}
 		}
 		System.out.println("END RTE listen...");
 	}
 	
-	public String AisLogGet(S_DEVICE dev){				
+	public String LogGet(S_DEVICE dev){				
 		byte[] pass = PASS.getBytes();
 		dev.status = libInstance.AIS_GetLog(dev.hnd, pass);
-		
 		if (dev.status !=0){
-			return libInstance.dl_status2str(dev.status).getString(0);
-			
+			return libInstance.dl_status2str(dev.status).getString(0);			
 		}
-		rte.DoCmd(dev);
-		rv = rte.AISPrintLog(dev);	
-		return rv.ret_string;		
+		DoCmd(dev);
+		rv = PrintLog(dev);	
+		return rteHead
+			  + rv.ret_string 
+			  + rteListHeader[0]
+			  + String.format("%nAIS_GetLog() %s%n",  libInstance.dl_status2str(dev.status).getString(0));		
 	}
 	
-	public void AisGetVersion(S_DEVICE dev){		
-		rv = AISGetVersion(dev);
+	public void GetVersion(S_DEVICE dev){		
+		rv = AisWrappGetVersion(dev);
 		System.out.format("AIS_GetVersion() |>>hw = %d | fw = %d%n", rv.hardwareType, rv.firmwareVersion);		
 	}
 	
 	
 	@SuppressWarnings("resource")
-	public String AisLogByIndex(S_DEVICE dev){	
+	public String LogByIndex(S_DEVICE dev){	
 		byte[] pass = PASS.getBytes();
 		Scanner inIndex = new Scanner(System.in);
 		System.out.println("#=- Print log by index -=#");
@@ -616,18 +659,21 @@ public class MyAisWrapper extends AisWrapper {
 		System.out.print("Enter index end  : ");
 		int endIndex = inIndex.nextInt();						
 		dev.status = libInstance.AIS_GetLogByIndex(dev.hnd, pass, startIndex, endIndex);
-		String fOut = String.format("AIS_GetLogByIndex:(pass: %s [ %d - %d ] >> %s)%n", new String(pass), startIndex, endIndex, libInstance.dl_status2str(dev.status).getString(0));
+		String fOut = String.format("%nAIS_GetLogByIndex:(pass: %s [ %d - %d ] >> %s)%n", PASS, startIndex, endIndex, libInstance.dl_status2str(dev.status).getString(0));
 		
 		if (dev.status !=0){
 			return fOut;
 		}
-		rte.DoCmd(dev);
-		rv = rte.AISPrintLog(dev);		
-		return  fOut + rv ;			  			
+		DoCmd(dev);
+		rv = PrintLog(dev);		
+		return  rteHead
+				+ rv.ret_string
+				+ rteListHeader[0]
+				+ fOut;		
 	}
 	
 	@SuppressWarnings("resource")
-	public String AisLogByTime(S_DEVICE dev){
+	public String LogByTime(S_DEVICE dev){
 		Scanner inIndex = new Scanner(System.in);
 		System.out.println("#=- Read LOG by Time (time-stamp) range -=#");
 		System.out.print("Enter time-stamp start: ");				
@@ -636,15 +682,367 @@ public class MyAisWrapper extends AisWrapper {
 		int endTime = inIndex.nextInt();				
 		byte[] pass = PASS.getBytes();
 		dev.status = libInstance.AIS_GetLogByTime(dev.hnd, pass, startTime, endTime);
-		String fOut = String.format("AIS_GetLogByTime:(pass: %s [ %d - %d ] >> %s)%n", new String(pass), startTime, endTime, libInstance.dl_status2str(dev.status).getString(0));
+		String fOut = String.format("%nAIS_GetLogByTime:(pass: %s [ %d - %d ] >> %s)%n", PASS, startTime, endTime, libInstance.dl_status2str(dev.status).getString(0));
 		
 		if (dev.status !=0){
 			return fOut;
 		}
-		rte.DoCmd(dev);
-		rv = rte.AISPrintLog(dev);		
-		return  fOut + rv ;			  			
+		DoCmd(dev);
+		rv = PrintLog(dev);		
+		return  rteHead
+				+ rv.ret_string
+				+ rteListHeader[0]
+				+ fOut;			  			
 	}
+	
+	/**
+     * UnreadLogInfo()
+     * @return read log count and rte count
+     */
+    private RetValues UnreadLogInfo(){
+     String sLogCount = "";
+     String sRteCount = "";         
+     int logCount = libInstance.AIS_ReadLog_Count(dev.hnd);
+     if (logCount == 0){
+        sLogCount = String.format("%nAIS_ReadLog_Count() %d%n" , logCount);
+     }
+     int rteCount = libInstance.AIS_ReadRTE_Count(dev.hnd);
+     if (rteCount == 0){
+    	 sRteCount = String.format("%nAIS_RTELog_Count() %d%n" , rteCount);
+     }
+     rv.ret_string = sLogCount + sRteCount;
+     return rv;
+   }
+    
+    public RetValues PrintLog(S_DEVICE dev){				
+		StringBuilder result = new StringBuilder();
+		StringBuilder nfcuid = new StringBuilder();
+		IntByReference logIndex = new IntByReference();
+		IntByReference logAction =  new IntByReference();
+		IntByReference logReaderID = new IntByReference();
+		IntByReference logCardID = new IntByReference();
+		IntByReference logSystemID = new IntByReference();
+		byte[] nfcUid = new byte[NFC_UID_MAX_LEN];
+		IntByReference nfcUidLen = new IntByReference();
+		LongByReference timeStamp = new LongByReference();		
+						
+		while (true){
+			dev.status = libInstance.AIS_ReadLog(dev.hnd,
+					                             logIndex,
+					                             logAction, 
+					                             logReaderID, 
+					                             logCardID, 
+					                             logSystemID, 
+					                             nfcUid, 
+					                             nfcUidLen, 
+					                             timeStamp);
+			
+			dev.log.index = logIndex.getValue();
+			dev.log.action = logAction.getValue();
+			dev.log.readerID = logReaderID.getValue();
+			dev.log.cardID = logCardID.getValue();
+			dev.log.systemID = logSystemID.getValue();
+			dev.log.nfc_uid = nfcUid;
+			dev.log.nfcUidLen = nfcUidLen.getValue();
+			dev.log.timestamp = timeStamp.getValue();
+			
+			if (dev.status != 0){				
+				break;
+			}
+			
+			for (int i=0;i<nfcUidLen.getValue();i++)
+				nfcuid.append(String.format("%02X:", nfcUid[i]));
+			
+			result.append(String.format(rteFormat, dev.log.index, 
+		               libInstance.dbg_action2str(dev.log.action).getString(0),
+		               dev.log.readerID, dev.log.cardID, dev.log.systemID,		               
+		               "[" + Integer.toString(dev.log.nfcUidLen) + "] " + nfcuid,
+		               dev.log.timestamp, new Date(dev.log.timestamp * 1000).toString())
+					   + "\n"
+					   );
+			nfcuid.setLength(0);
+		}
+		rv.ret_string = result.toString();
+		return rv;
+	}
+	
+    public RetValues MainLoop(S_DEVICE dev){		
+		IntByReference realTimeEvents = new IntByReference();
+		IntByReference logAvailable = new IntByReference();
+		IntByReference unreadLog = new IntByReference();
+		IntByReference cmdResponses = new IntByReference();    
+		IntByReference cmdPercent = new IntByReference();
+		IntByReference devStatus = new IntByReference();
+		IntByReference timeOutOccured = new IntByReference();
+		IntByReference _status = new IntByReference();
+						
+		dev.status = libInstance.AIS_MainLoop(dev.hnd, 
+				      realTimeEvents, 
+				      logAvailable, 
+				      unreadLog, 
+				      cmdResponses, 
+				      cmdPercent, 
+				      devStatus, 
+				      timeOutOccured, 
+				      _status);
+		
+		dev.realTimeEvents = realTimeEvents.getValue();
+		dev.logAvailable = logAvailable.getValue();
+		dev.logUnread = unreadLog.getValue();
+		dev.cmdResponses = cmdResponses.getValue();
+		dev.cmdPercent = cmdPercent.getValue();
+		dev.devStatus = devStatus.getValue();
+		dev.timeOutOccured = timeOutOccured.getValue();
+		dev.Status = _status.getValue();
+		
+		if (dev.status != 0){
+			if (dev.statusLast != dev.status){
+			   System.out.println(libInstance.dl_status2str(dev.status).getString(0));			   
+			}
+			dev.statusLast = dev.status;
+			rv.ret_state = false;
+			return rv;
+		}
+		
+		if (dev.realTimeEvents != 0){
+			rv = PrintRTE(dev);
+			System.out.println(rv.ret_string);
+			
+		}
+		
+		if (dev.logAvailable != 0){
+			rv = PrintLog(dev);
+			//System.out.print(rv.ret_string);
+		}
+		
+		if(dev.logUnread != 0){
+			if (dev.logUnreadLast != dev.logUnread){
+				dev.logUnreadLast = dev.logUnread;
+				//System.out.print(printLogUnread(dev));
+			}
+		}
+		
+		if (dev.timeOutOccured != 0){
+			System.out.printf("TimeoutOccurred= %d\n" , dev.timeOutOccured);
+		}
+		 
+		if (dev.Status != 0){
+			System.out.printf("[%d] local_status= %s\n", dev.idx, libInstance. dl_status2str(dev.Status).getString(0));
+		}
+		
+		if (dev.cmdPercent != 0){
+			printPercent(dev.cmdPercent);
+		}
+		
+		if (dev.cmdResponses != 0){
+			dev.cmdFinish = true;
+			System.out.print("\n-- COMMAND FINISH !\n");
+		}
+		rv.ret_state = true;
+		return rv;
+	}   
+   
+    public RetValues PrintRTE(S_DEVICE dev){
+		String res; 
+		StringBuilder result = new StringBuilder();
+		StringBuilder nfcuid = new StringBuilder();		
+		IntByReference logIndex = new IntByReference();
+		IntByReference logAction = new IntByReference();
+		IntByReference logReaderID = new IntByReference();
+		IntByReference logCardID = new IntByReference();
+		IntByReference logSystemID = new IntByReference();
+		byte[] nfcUid = new byte[NFC_UID_MAX_LEN];
+		IntByReference nfcUidLen = new IntByReference();
+		LongByReference timeStamp = new LongByReference();		
+		int rteCount = libInstance.AIS_ReadLog_Count(dev.hnd);
+			
+		String rteHead = String.format("AIS_ReadRTE_Count = %d%n", rteCount)
+				       + "= RTE Real Time Events = \n"
+				       + rteListHeader[0] + "\n"
+				       + rteListHeader[1] + "\n"
+				       + rteListHeader[0] + "\n";
+		
+		while (true){			
+			dev.status = libInstance.AIS_ReadRTE(dev.hnd, logIndex, logAction, logReaderID, logCardID, logSystemID, nfcUid, nfcUidLen, timeStamp);			
+			dev.log.index = logIndex.getValue();
+			dev.log.action = logAction.getValue();
+			dev.log.readerID = logReaderID.getValue();
+			dev.log.cardID = logCardID.getValue();
+			dev.log.systemID = logSystemID.getValue();
+			dev.log.nfc_uid = nfcUid;
+			dev.log.nfcUidLen = nfcUidLen.getValue();
+			dev.log.timestamp = timeStamp.getValue();											
+			
+			if (dev.status !=0){
+				break;
+			}
+			for (int i=0;i<nfcUidLen.getValue();i++)
+				nfcuid.append(String.format(":%02X", nfcUid[i]));
+			
+			result.append(String.format(rteFormat, dev.log.index, 
+					               AisWrapper.libInstance.dbg_action2str(dev.log.action).getString(0),
+					               dev.log.readerID, dev.log.cardID, dev.log.systemID,
+					               "[" + Integer.toString(dev.log.nfcUidLen) + "] " + nfcuid,
+					               dev.log.timestamp, new Date(dev.log.timestamp * 1000).toString())
+					              );
+								
+		}		
+		res = result + "\n"			  
+			  + rteListHeader[0] 
+			  + "\n";				
+		rv.ret_string = rteHead + res + String.format("LOG unread (incremental) = %d %s\n", dev.logUnread, libInstance.dl_status2str(dev.status).getString(0));
+		return rv;
+	}
+    
+    private void printPercent(int Percent){
+  	  
+  	  if (progress.printHdr == true){
+  		  progress.printHdr = false;
+  		  progress.percentOld = -1;		  
+  	  }
+  	  while (progress.percentOld != Percent){
+  		 if (progress.percentOld < 100){
+  			 System.out.print(".");
+  		 }
+  		 progress.percentOld ++;
+  	  }
+    }
+    
+    
+    
+    
+    public void DoCmd(S_DEVICE dev){
+  	  if (dev.status !=0){
+  		  return;
+  		 }
+  	  dev.cmdFinish = false;
+  	  progress.printHdr = true;
+  	  while(!dev.cmdFinish){
+  		  rv = MainLoop(dev);		  		  		  		  
+  		  if (!rv.ret_state){
+  			  break;
+  		  }
+  		  
+  	  }
+  	  
+    }   
+    
+	
+  /**
+   * 
+   * @param dev - S_DEVICE class reference
+   * @return unreaded log count
+   */
+  protected String printLogUnread(S_DEVICE dev){
+	  return String.format("LOG unread (incremental) = %d", dev.logUnread);
+  }
+ 
+     
+    public RetValues UnreadLogCount(S_DEVICE dev){     	
+    	MainLoop(dev);
+    	rv.ret_string = printLogUnread(dev);
+    	return rv;
+    }
+    
+    public RetValues UnreadLogGet(S_DEVICE dev){
+    	StringBuilder nfcuid = new StringBuilder();  
+    	StringBuilder res = new StringBuilder(); 
+    	IntByReference logIndex = new IntByReference();
+		IntByReference logAction = new IntByReference();
+		IntByReference logReaderID = new IntByReference();
+		IntByReference logCardID = new IntByReference();
+		IntByReference logSystemID = new IntByReference();
+		byte[] nfcUid = new byte[NFC_UID_MAX_LEN];
+		IntByReference nfcUidLen = new IntByReference();
+		LongByReference timeStamp = new LongByReference();					
+		dev.status = libInstance.AIS_UnreadLOG_Get(dev.hnd, logIndex, logAction, logReaderID, logCardID, logSystemID, nfcUid, nfcUidLen, timeStamp);
+		
+		if (dev.status !=0){
+			rv.ret_string = libInstance.dl_status2str(dev.status).getString(0);
+			return rv;			
+		}		
+		for (int i=0;i<nfcUidLen.getValue();i++)
+			nfcuid.append(String.format(":%02X", nfcUid[i]));
+		
+		dev.log.index = logIndex.getValue();
+		dev.log.action = logAction.getValue();
+		dev.log.readerID = logReaderID.getValue();
+		dev.log.cardID = logCardID.getValue();
+		dev.log.systemID = logSystemID.getValue();
+		dev.log.nfc_uid = nfcUid;
+		dev.log.nfcUidLen = nfcUidLen.getValue();
+		dev.log.timestamp = timeStamp.getValue();
+		
+		String rteHead = rteListHeader[0] + "\n"
+		           + rteListHeader[1] + "\n"
+		           + rteListHeader[0] + "\n";
+		
+		
+		res.append(String.format(rteFormat, dev.log.index, 
+	               libInstance.dbg_action2str(dev.log.action).getString(0),
+	               dev.log.readerID, dev.log.cardID, dev.log.systemID,		               
+	               "[" + Integer.toString(dev.log.nfcUidLen) + "] " + nfcuid,
+	               dev.log.timestamp, new Date(dev.log.timestamp * 1000).toString()
+	              ));
+	    rv.ret_string = rteHead
+	    		      + res + "\n"
+	    		      + rteListHeader[0] + "\n"
+	    		      + String.format("%nAIS_UnreadLOG_Get() %s%n", libInstance.dl_status2str(dev.status).getString(0));
+	    return rv;			
+    }
+   
+   
+  public RetValues UnreadLogAck(S_DEVICE dev){
+	  int recToAck = RECORDS_TO_ACK;
+	  dev.status = libInstance.AIS_UnreadLOG_Ack(dev.hnd, recToAck);
+	  rv.ret_string = String.format("%nAIS_UnreadLOG_Ack() %s%n",  libInstance.dl_status2str(dev.status).getString(0));
+	  return rv;
+  }
+    
+    
+    
+    
+   public String UnreadShowMeni(){
+	   return "\n 1 : Count | 2 : Get | 3 : Ack | x : Exit "
+			        + "\n--------------------------\n"
+		            + "Press key to select action\n\n";
+	  	  
+   }
+   
+   @SuppressWarnings("resource")
+   public boolean UnreadMeniLoop(){	   
+	Scanner scan = new Scanner(System.in);
+	String input = scan.nextLine();
+	   if (input.contains("1"))
+	     {
+		   rv = UnreadLogCount(dev);		   
+		   System.out.print(rv.ret_string);  
+	     }
+	   if (input.contains("2")){
+		   rv = UnreadLogGet(dev);
+		   System.out.print(rv.ret_string);
+	   }
+	   if (input.contains("3")){
+		   rv = UnreadLogAck(dev);
+		   System.out.print(rv.ret_string);
+	   }
+	   if (input.contains("x")){		  		  
+		   return false; 
+	   }	   
+	   return true;
+   }
+   
+   public void UnreadLog(){
+	   System.out.println(UnreadShowMeni());
+	   while (true){
+		   if (UnreadMeniLoop() !=true) {
+			   break;
+			}
+	   }
+   }	
+	
+	
+	
 	
   public RetValues EELock(S_DEVICE dev){	  
 	  byte[]pass = PASS.getBytes();	  
@@ -701,10 +1099,10 @@ public class MyAisWrapper extends AisWrapper {
 	void listDevices(){    	
     	prepareListForCheck();
     	System.out.println("checking...please wait...");
-    	int devCount = AISListUpdateAndGetCount();    	    
+    	int devCount = AisWrappListUpdateAndGetCount();    	    
     	System.out.printf("AIS_List_UpdateAndGetCount()= [%d]%n", devCount); 
     	if (devCount >0){
-    		AISGetListInformation();
+    		GetListInformation();
     	}else
     		System.out.println("NO DEVICE FOUND!");
     }
@@ -732,10 +1130,6 @@ public class MyAisWrapper extends AisWrapper {
 				if (line.startsWith("#") || (linePart.length <= 1)){ 
 					continue;				
 				}
-//				
-//				if (linePart.length <= 1){ 
-//					continue;
-//				}
 			   devTypeStr = linePart[0];
 			   devId = Integer.parseInt(linePart[1]);					 
 			   libInstance.device_type_str2enum(devTypeStr, devTypeEnum);
@@ -762,7 +1156,7 @@ public class MyAisWrapper extends AisWrapper {
     	int deviceType;
     	int deviceId;    	
     	int dlstatus;
-    	getDevices = AISGetDevicesForCheck();
+    	getDevices = AisWrappGetDevicesForCheck();
     	if (getDevices.length() == 0)
     	   {return;}        
     	for (String item : getDevices.split("\n"))
@@ -780,7 +1174,7 @@ public class MyAisWrapper extends AisWrapper {
     void prepareListForCheck(){    	
     	System.out.println("AIS_List_GetDevicesForCheck() BEFORE / DLL STARTUP");
     	listForCheckPrint();
-    	AISListEraseAllDeviceForCheck();
+    	AisWrappListEraseAllDeviceForCheck();
     	if (!loadListFromFile()){
     		System.out.println("Tester try to connect with a Base HD device on any/unkown ID");
     	    addDevice(E_KNOWN_DEVICE_TYPES.DL_AIS_BASE_HD_SDK.value(),0);
@@ -793,7 +1187,7 @@ public class MyAisWrapper extends AisWrapper {
     int addDevice(int deviceType, int deviceId){
     	String fOut;
     	int dlstatus;
-    	dlstatus = AISListAddDeviceForCheck(deviceType, deviceId);
+    	dlstatus = AisWrappListAddDeviceForCheck(deviceType, deviceId);
     	fOut = String.format("AIS_List_AddDeviceForCheck(type: %d, id: %d)> { %s }", 
     			                 deviceType, deviceId, libInstance.dl_status2str(dlstatus).getString(0));
     	System.out.println(fOut);
@@ -802,28 +1196,28 @@ public class MyAisWrapper extends AisWrapper {
     
     void ListEraseAllDevicesForCheck(){
     	System.out.println("AIS_List_EraseAllDevicesForCheck()");
-    	AISListEraseAllDeviceForCheck();
+    	AisWrappListEraseAllDeviceForCheck();
     }
     
     void GetDevicesForCheck(){
-    	System.out.format("AISGetDevicesForCheck() :%s",AISGetDevicesForCheck());
+    	System.out.format("AISGetDevicesForCheck() :%s",AisWrappGetDevicesForCheck());
     }
     
     void ListAddDeviceForCheck(int deviceType, int deviceId){
     	int dlstatus;
     	String fOut;
-    	dlstatus =  AISListAddDeviceForCheck(deviceType, deviceId);
+    	dlstatus =  AisWrappListAddDeviceForCheck(deviceType, deviceId);
     	fOut = String.format("AIS_List_AddDeviceForCheck()>> deviceType: %d : deviceId: %d |DL_STATUS: %d", deviceType, deviceId, dlstatus);
     	System.out.println(fOut);
     }
     
    
     
-	void AISGetListInformation(){    	    			
+	void GetListInformation(){    	    			
 		StringBuilder result = new StringBuilder();
-		String res;
+		StringBuilder res = new StringBuilder();
 		int dlstatus;
-		int devCount = AISListUpdateAndGetCount();
+		int devCount = AisWrappListUpdateAndGetCount();
     	if (devCount <= 0) {
     		return;
     		}
@@ -846,7 +1240,7 @@ public class MyAisWrapper extends AisWrapper {
 	    			return;    		
 	    		}
 	    		HND_LIST.add(hnd.getValue());    		
-	    		AisOpen();
+	    		Open();
 	    		dev.idx = 1;
 	    		dev.hnd = hnd.getValue(); 	            
 	            dev.devSerial = devSerial.getValue().getString(0); 	            	            	            	            	            	            	            
@@ -875,8 +1269,8 @@ public class MyAisWrapper extends AisWrapper {
 							         dev.devStatus,
 							         dev.systemStatus)
 							    );
-				   res = result.toString();			         
-			       System.out.println(res += myFormats.get(0));
+				   res.append(result.toString() + myFormats.get(0));			         
+			       System.out.println(res.toString());
 					
 					
 				} catch (Exception e) {				
@@ -895,12 +1289,12 @@ public class MyAisWrapper extends AisWrapper {
     
     
 	public static void main(String[] args) {			   	  	 
-       MyAisWrapper init = new MyAisWrapper();       
-       System.out.println(init.AISGetLibraryVersionStr());
-       init.init();          	  
+       AisShell shell = new AisShell();       
+       System.out.println(shell.AisWrappGetLibraryVersionStr());
+       shell.init();          	  
    	   while (true) 
        {
-    	   if (!init.MeniLoop()){
+    	   if (!shell.MeniLoop()){
     		   break;    		   
     	   }
        }

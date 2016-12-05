@@ -1,7 +1,7 @@
 /**
  * 
  */
-package rs.dlogic.wrapper;
+package rs.dlogic.aiswrapper;
 
 
 /**
@@ -14,116 +14,119 @@ import com.sun.jna.*;
 import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.ptr.LongByReference;
 import com.sun.jna.ptr.PointerByReference;
+
+import rs.dlogic.aiswrapper.AisWrapper.RetValues;
+import rs.dlogic.aiswrapper.AisWrapper.S_DEVICE;
+
 import java.util.Date;
 
 
 
-class S_PROGRESS{
-	boolean printHdr;
-	int percentOld;
-}
-
-
-class S_LOG{
-	int index;
-	int action;
-	int readerID;
-	int cardID;
-	int systemID;
-	byte[]nfc_uid;
-	int nfcUidLen;
-	long timestamp;
-}
-
-
-class S_DEVICE{	
-	int idx;
-	Pointer hnd;
-	String devSerial;
-	int devType;
-	int devID;
-	int devFW_VER;
-	int devCommSpeed;	
-	String devFTDI_Serial;
-	int devOpened;
-	int devStatus;
-	int statusLast;
-	int systemStatus;
-	int relayState;
-	int realTimeEvents;
-	int logAvailable;
-	int logUnread;
-	int logUnreadLast;
-	int cmdResponses;
-	int cmdPercent;
-	Boolean cmdFinish;
-	int timeOutOccured;
-	int status;
-	int Status;	
-	S_LOG log = new S_LOG();
-}
-
-class RetValues{	
-	 long currentTime;	
-     long timezone;
-	 int DST;
-	 long offset;
-	 int dl_status;	
-	 int listSize = 0;
-	 String strList = null;	
-	 int intercom;
-	 int door;
-	 int relay_state;
-	 int hardwareType;
-	 int firmwareVersion;
-	 Boolean ret_state;
-	 String ret_string;
-}
-
-
 public class AisWrapper {			
-		
-	protected static AisLibrary libInstance;
+	
+	public class S_PROGRESS{
+		public boolean printHdr;
+		public int percentOld;
+	}
+
+	public class S_LOG{
+		public int index;
+		public int action;
+		public int readerID;
+		public int cardID;
+		public int systemID;
+		public byte[]nfc_uid;
+		public int nfcUidLen;
+		public long timestamp;
+	}
+	
+	
+	
+	
+   public class RetValues{	
+	   public long currentTime;	
+	   public long timezone;
+	   public int DST;
+	   public long offset;
+	   public int dl_status;	
+	   public int listSize = 0;
+	   public String strList = null;	
+	   public int intercom;
+	   public int door;
+	   public int relay_state;
+	   public int hardwareType;
+	   public int firmwareVersion;
+	   public Boolean ret_state;
+	   public String ret_string;
+	}
+	
+	
+	public class S_DEVICE{	
+		public int idx;
+		public Pointer hnd;
+		public String devSerial;
+		public int devType;
+		public int devID;
+		public int devFW_VER;
+		public int devCommSpeed;	
+		public String devFTDI_Serial;
+		public int devOpened;
+		public int devStatus;
+		public int statusLast;
+		public int systemStatus;
+		public int relayState;
+		public int realTimeEvents;
+		public int logAvailable;
+		public int logUnread;
+		public int logUnreadLast;
+		public int cmdResponses;
+		public int cmdPercent;
+		public Boolean cmdFinish;
+		public int timeOutOccured;
+		public int status;
+		public int Status;	
+		public S_LOG log = new S_LOG();
+	}
+	
+	
+	
+	public static AisLibrary libInstance;
 	RetValues rv = new RetValues();
-	AisWrapper(){
+	public AisWrapper(){
 		libInstance = AisLibrary.aisReaders;		 
 	}
 	
+		
+	public int NFC_UID_MAX_LEN = 10;
 
-	/**
-	 * functions implement
-	 * @author Vladan
-	 *
-	 */
-	protected String AISGetLibraryVersionStr(){
+	protected String AisWrappGetLibraryVersionStr(){
     	return libInstance.AIS_GetLibraryVersionStr().getString(0);
     }
 	
-	protected void AISListEraseAllDeviceForCheck(){
+	protected void AisWrappListEraseAllDeviceForCheck(){
 		libInstance.AIS_List_EraseAllDevicesForCheck();
 	}
 	
-	protected int AISListAddDeviceForCheck(int deviceType,int deviceId){
+	protected int AisWrappListAddDeviceForCheck(int deviceType,int deviceId){
 		return libInstance.AIS_List_AddDeviceForCheck(deviceType, deviceId);
 	}
 	
-	protected String AISGetDevicesForCheck(){
+	protected String AisWrappGetDevicesForCheck(){
 		return libInstance.AIS_List_GetDevicesForCheck().getString(0);
 	}
 	
-	protected int AISListUpdateAndGetCount(){
+	protected int AisWrappListUpdateAndGetCount(){
     	IntByReference deviceCount = new IntByReference();
     	libInstance.AIS_List_UpdateAndGetCount(deviceCount);
     	return deviceCount.getValue();
     }
 	
-    protected RetValues AISGetTime(Pointer devHnd){
-    	int DL_STATUS;     	
+    protected RetValues AisWrappGetTime(Pointer devHnd){
     	LongByReference currentTime = new LongByReference(0);    	
     	IntByReference timezone = new IntByReference();
     	IntByReference DST = new IntByReference();
     	IntByReference offset = new IntByReference();
-    	DL_STATUS = libInstance.AIS_GetTime(devHnd, 
+    	int DL_STATUS = libInstance.AIS_GetTime(devHnd, 
     			                            currentTime, 
     			                            timezone, 
     			                            DST, 
@@ -136,14 +139,13 @@ public class AisWrapper {
        return rv;    			    		    
     }
     
-    protected RetValues AISSetTime(Pointer devHnd, String pass){
-    	int DL_STATUS;    	     	    	
+    protected RetValues AisWrappSetTime(Pointer devHnd, String pass){    	    	     	    	
     	long currentTime = new Date().getTime();     	
     	long timezone = libInstance.sys_get_timezone();
     	int DST = libInstance.sys_get_daylight();
     	long offset = libInstance.sys_get_dstbias();
     	byte[]PASS = pass.getBytes(); 
-    	DL_STATUS = libInstance.AIS_SetTime(devHnd, 
+    	int DL_STATUS = libInstance.AIS_SetTime(devHnd, 
     			                            PASS,
     			                            new NativeLong(currentTime / 1000),    			                           
     			                            timezone, 
@@ -157,15 +159,23 @@ public class AisWrapper {
        return rv;    	
     }
     
-    protected RetValues AISConfigFileRead(S_DEVICE dev,String fileName, String pass){    	
+    protected RetValues AisWrappConfigFileRead(S_DEVICE dev, String fileName, String pass){    	
     	byte[]passw = pass.getBytes();
     	byte[]configFile = fileName.getBytes();
-    	dev.devStatus = libInstance.AIS_Config_Read(dev.hnd, passw, configFile);    	   	    
-    	rv.dl_status = dev.devStatus;
+    	dev.status = libInstance.AIS_Config_Read(dev.hnd, passw, configFile);    	   	    
+    	rv.dl_status = dev.status;
     	return rv;
     }
     
-    protected RetValues AISBlackListWrite(S_DEVICE dev, String pass, String blackList){    	    	
+    public RetValues AisWrappConfigFileWrite(S_DEVICE dev, String fileName){
+    	byte[]configFile = fileName.getBytes();
+    	dev.status = libInstance.AIS_Config_Send(dev.hnd, configFile);
+    	rv.dl_status = dev.status;
+    	return rv;
+    }
+    
+    
+    protected RetValues AisWrappBlackListWrite(S_DEVICE dev, String pass, String blackList){    	    	
     	
     	byte[] PASS = pass.getBytes();
     	byte[] bBlackList = blackList.getBytes();
@@ -175,7 +185,7 @@ public class AisWrapper {
     	return rv;
     }
     
-    protected RetValues AISWhiteListWrite(S_DEVICE dev, String pass, String whiteList){    	   	
+    protected RetValues AisWrappWhiteListWrite(S_DEVICE dev, String pass, String whiteList){    	   	
     	
     	byte[] PASS = pass.getBytes();
     	byte[] bWhiteList = whiteList.getBytes();
@@ -185,7 +195,7 @@ public class AisWrapper {
     	return rv;
     }
     
-    protected RetValues AISBlackListRead(S_DEVICE dev, String pass){
+    protected RetValues AisWrappBlackListRead(S_DEVICE dev, String pass){
     	PointerByReference blackList = new PointerByReference();    	  	
     	String listSize;
     	byte[] PASS = pass.getBytes();
@@ -203,7 +213,7 @@ public class AisWrapper {
         return rv;   
     }
     
-    protected RetValues AISWhiteListRead(S_DEVICE dev, String pass){
+    protected RetValues AisWrappWhiteListRead(S_DEVICE dev, String pass){
     	PointerByReference whiteList = new PointerByReference();    	    	
     	String listSize;
     	byte[] PASS = pass.getBytes();
@@ -221,13 +231,13 @@ public class AisWrapper {
         return rv;   
     }
     
-    protected RetValues AISTestLights(S_DEVICE dev, int greenMaster, int redMaster, int greenSlave, int redSlave){    	     	  	
+    protected RetValues AisWrappTestLights(S_DEVICE dev, int greenMaster, int redMaster, int greenSlave, int redSlave){    	     	  	
    	    dev.devStatus = libInstance.AIS_LightControl(dev.hnd, greenMaster, redMaster, greenSlave, redSlave);   	    		                        	   
    	    rv.dl_status = dev.devStatus;    	    	
    	    return rv;
     }
     
-    protected RetValues AISGetIOState(S_DEVICE dev){    	
+    protected RetValues AisWrappGetIOState(S_DEVICE dev){    	
     	IntByReference intercom = new IntByReference();
     	IntByReference door = new IntByReference();
     	IntByReference relay_state = new IntByReference();
@@ -239,8 +249,8 @@ public class AisWrapper {
     	return rv;    	
     }
     
-    protected RetValues AISRelayToogle(S_DEVICE dev){    	
-    	AISGetIOState(dev);
+    protected RetValues AisWrappRelayToogle(S_DEVICE dev){    	
+    	AisWrappGetIOState(dev);
     	if (dev.relayState == 0) {
     		dev.relayState = 1; 		   
     	}
@@ -253,13 +263,13 @@ public class AisWrapper {
     
     
     
-    protected RetValues AISLockOpen(S_DEVICE dev,int pulseDuration){    	    
+    protected RetValues AisWrappLockOpen(S_DEVICE dev,int pulseDuration){    	    
     	dev.devStatus =libInstance.AIS_LockOpen(dev.hnd, pulseDuration);
     	rv.dl_status = dev.devStatus;
     	return rv;
     }
     
-    protected RetValues AISGetVersion(S_DEVICE dev){
+    protected RetValues AisWrappGetVersion(S_DEVICE dev){
     	IntByReference hardwareType = new IntByReference();
     	IntByReference firmwareVersion = new IntByReference();
     	rv.dl_status = libInstance.AIS_GetVersion(dev.hnd, hardwareType, firmwareVersion);
@@ -267,12 +277,20 @@ public class AisWrapper {
     	rv.firmwareVersion = firmwareVersion.getValue();
     	return rv;
     }
+ 
+    
+    
+    
+    
+    
+    
+    
     
     
  //*********************************************************************************   
 	
 static String sPlatform;
-static public String GetLibFullPath() {
+public static String GetLibFullPath() {
 
     String lib_path = System.getProperty("user.dir");
     switch(Platform.getOSType())
@@ -342,13 +360,13 @@ private static String GetPlatformType()
    
 	  platformType = prefix + libName + "-" + postfix + extension;	 
    return platformType;
-}
+    }
  
 public interface AisLibrary extends Library{
-		
-	AisLibrary aisReaders = (AisLibrary)Native.loadLibrary(GetLibFullPath(),AisLibrary.class);
+	
+	AisLibrary aisReaders = (AisLibrary)Native.loadLibrary(AisWrapper.GetLibFullPath(),AisLibrary.class);
 			
-	Pointer AIS_GetLibraryVersionStr();
+    Pointer AIS_GetLibraryVersionStr();
 	
 	int AIS_GetVersion(Pointer device,
 			          IntByReference hardware_type,
@@ -501,6 +519,11 @@ public interface AisLibrary extends Library{
 		              byte[] password,
 		              byte[] config_bin_filename);
    
+   int AIS_Config_Send(Pointer device,
+                       byte[] config_bin_filename);
+   
+   
+   
    int AIS_GetIoState(Pointer device,
 		              IntByReference intercom,
 		              IntByReference door,
@@ -536,9 +559,6 @@ public interface AisLibrary extends Library{
 		                IntByReference hwType, IntByReference speed, 
 		                IntByReference rteTest, IntByReference isHalfDuplex,
 		                IntByReference isAloneOnTheBus);
-   
-    
-   
-}
-   	   	   
+  
+  }
 }
