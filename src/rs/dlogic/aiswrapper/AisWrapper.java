@@ -15,9 +15,6 @@ import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.ptr.LongByReference;
 import com.sun.jna.ptr.PointerByReference;
 
-import rs.dlogic.aiswrapper.AisWrapper.RetValues;
-import rs.dlogic.aiswrapper.AisWrapper.S_DEVICE;
-
 import java.util.Date;
 
 
@@ -542,7 +539,9 @@ public interface AisLibrary extends Library{
 		                 byte[]newPass);
    
    
-   
+   int AIS_FW_Update(Pointer device,
+		            String firmware_bin_file,
+		            int percent);
    
    int device_type_enum2str(int devType, PointerByReference dev_type_str);          
    int device_type_str2enum(String devTypeStr,IntByReference devType);   

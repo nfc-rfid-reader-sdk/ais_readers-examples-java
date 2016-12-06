@@ -230,6 +230,9 @@ public class AisShell extends AisWrapper {
 		case "p":
 			SetApplicationPass(dev);
 			break;
+		case "F":
+			FwUpdate(dev);
+			break;
 		default:
 			System.out.print(ShowMeni());
 			break;				
@@ -278,7 +281,21 @@ public class AisShell extends AisWrapper {
     	System.out.printf("AIS_Config_Send():%s", libInstance.dl_status2str(rv.dl_status).getString(0));
     }
     
-    
+    @SuppressWarnings("resource")
+    public void FwUpdate(S_DEVICE dev){
+    	System.out.println("Flashing firmware part.\nFlash firmware for selected device.");
+    	System.out.print("Enter full firmware BIN filename: ");
+    	Scanner scan = new Scanner(System.in);
+    	String input = scan.nextLine();
+    	if (input.length() == 0){
+    		System.out.println("Error while getting file name !");
+    		return;
+    	}
+    	System.out.print("\nWait,please ... ");
+    	progress.printHdr = true;
+    	dev.status = libInstance.AIS_FW_Update(dev.hnd, input.toString(), 0);
+    	System.out.printf("%nAIS_FW_Update(%s)> %s%n",input.toString(), libInstance.dl_status2str(dev.status).getString(0));
+    }
     
     
     public void GetIOState(S_DEVICE dev){    	
