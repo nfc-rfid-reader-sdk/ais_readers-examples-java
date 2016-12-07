@@ -48,27 +48,18 @@ public class AisShell extends AisWrapper {
 	private List<String>myFormats = new ArrayList<String>();
     private ArrayList<Pointer>HND_LIST = new ArrayList<Pointer>();
     
-    private PointerByReference hnd = new PointerByReference();
-	private PointerByReference devSerial = new PointerByReference();
-	private IntByReference devType = new IntByReference();
-	private IntByReference devID = new IntByReference();
-	private IntByReference devFW_VER = new IntByReference();
-	private IntByReference devCommSpeed = new IntByReference();
-	private PointerByReference devFTDI_Serial = new PointerByReference();
-	private IntByReference devOpened = new IntByReference();
-	private IntByReference devStatus = new IntByReference();
-	private IntByReference systemStatus = new IntByReference();
+   
     
-	
+	private int devicesIndex    = 0;
 	private String PASS         = "1111";
-	private int SECONDS         = 10;   	
+	private int SECONDS         = 20;   	
 	private int PULSE_DURATION  = 2000;
 	private int RECORDS_TO_ACK  = 1;
 	
 	private static final String GREEN_MASTER = "green_master";
-	private static final String RED_MASTER = "red_master";
-	private static final String GREEN_SLAVE = "green_slave";
-	private static final String RED_SLAVE = "red_slave";
+	private static final String RED_MASTER   = "red_master";
+	private static final String GREEN_SLAVE  = "green_slave";
+	private static final String RED_SLAVE    = "red_slave";
    
     
    private void MyFormats(){	   
@@ -83,7 +74,7 @@ public class AisShell extends AisWrapper {
   	           "| Idx   |              action              | RD ID | Card ID | JobNr |    NFC [length] : UID    | Time-stamp |       Date - Time            |"
   	};  
 
-  
+   
    
    String rteHead = rteListHeader[0] + "\n"
                   + rteListHeader[1] + "\n"
@@ -110,31 +101,25 @@ public class AisShell extends AisWrapper {
 	  
    }
    
-   private void ActiveDevice(AisWrapper.S_DEVICE dev, int index)  {
-	try {
+   private String ActiveDevice(AisWrapper.S_DEVICE dev, int index)  {
+	 String result = "";
+	 try {
 		dev.hnd = HND_LIST.get(index);		  		   		  
-		dev.idx = HND_LIST.indexOf(dev.hnd) + 1;
-		System.out.printf(" dev [%d] | hnd= 0x%X  %n" , dev.idx, dev.hnd.getInt(0));		
+		dev.idx = HND_LIST.indexOf(dev.hnd) + 1;		
+		result = String.format("Active device [%d] | hnd= 0x%X  %n" , dev.idx, dev.hnd.getInt(0));				
+	} catch (IndexOutOfBoundsException  index_exc) {		
+		System.out.print("\nThe index of the device is not valid !\n");
+	} catch (NullPointerException null_exc){
 		
-	} catch (IndexOutOfBoundsException | NullPointerException e) {		
-		System.out.format("Exception: %s",e.toString());
-	}
-	   
+	}	 
+	   return result;
    }
    
    @SuppressWarnings("resource")
-   private Boolean MeniLoop(){
-	   Scanner terminal;
-	   terminal = new Scanner(System.in);	   
-	   String mChar = terminal.nextLine();	 	 
-	   int index;
-	   if (Character.isDigit(mChar.trim().charAt(0))){		  
-		   index = Integer.parseInt(mChar)-1;
-		   ActiveDevice(dev, index);
-	   }else{
-		   ActiveDevice(dev, 0); 
-	   }
-	   	   
+   private Boolean MeniLoop(){	   
+	   Scanner terminal = new Scanner(System.in);	   
+	   String mChar = terminal.nextLine();	 	 	   
+
 	   if (mChar.contains("x")){
 		   System.out.println("\nAPPLICATION EXIT NOW !\n");
 		   terminal.close();
@@ -148,7 +133,8 @@ public class AisShell extends AisWrapper {
 		case "q":
 			GetListInformation();
 			break;
-		case "i":
+		case "i":			 
+			 System.out.println(ActiveDevice(dev, devicesIndex));
 		     GetVersion(dev);
 		     GetTime(dev);
 		     System.out.println(libInstance.sys_get_timezone_info().getString(0));
@@ -162,22 +148,22 @@ public class AisShell extends AisWrapper {
 		case "d": //Get devices count
 			System.out.printf("DEVICE COUNT: %d%n" ,AisWrappListUpdateAndGetCount());
 			break;
-		case "t":
+		case "t":			
 			GetTime(dev);						
 			break;
-		case "T":
+		case "T":			
 			SetTime(dev);
 			break;
-		case "b": //Black_list read
+		case "b":     //Black_list read			
 			BlackListRead(dev);
 			break;
-		case "B":
+		case "B":			
 			BlackListWrite(dev);
 			break;
-		case "w": //White list read
+		case "w": //White list read			
 			WhiteListRead(dev);
 			break;
-		case "W":
+		case "W":			
 			WhiteListWrite(dev);
 			break;
 		case "L":
@@ -234,8 +220,16 @@ public class AisShell extends AisWrapper {
 			FwUpdate(dev);
 			break;
 		default:
-			System.out.print(ShowMeni());
-			break;				
+			try{
+			if (Character.isDigit(mChar.trim().charAt(0))){		  
+				   devicesIndex = Integer.parseInt(mChar)-1;
+				   ActiveDevice(dev, devicesIndex); 
+			   }
+			System.out.println(ActiveDevice(dev, devicesIndex));
+			}catch(StringIndexOutOfBoundsException exc){
+				return true;
+			}
+			break;
 		}		  
 	  return true;
    }
@@ -529,7 +523,7 @@ public class AisShell extends AisWrapper {
 	   
 		
 		String getDev = AisWrappGetDevicesForCheck();
-	    System.out.println(header);
+	    System.out.print(header);
 	    
 		for (String item : getDev.split("\n")) {
 			String[] devTypes = item.split(":");
@@ -547,27 +541,27 @@ public class AisShell extends AisWrapper {
 	@SuppressWarnings ("resource")
 	public int [] DevInput(){		
 		int maxDev = E_KNOWN_DEVICE_TYPES.DL_AIS_SYSTEM_TYPES_COUNT.value();
-		System.out.println("Enter device type and then enter device BUS ID for check");
-		int[]devInput = new int[2];
-		Scanner in;	
-		in = new Scanner(System.in);
-		while (true){			
-			System.out.printf("Enter device type (1,2, ... , %d)('x' for exit !)   : " , maxDev-1);
-			String scan = in.next();
+		int[]devInput = new int[2];		
+		Scanner in = new Scanner(System.in);
+		String scan;		
+		while (true){						
+			System.out.println("Enter device type and then enter device BUS ID for check");
+			System.out.printf("Enter device type (1,2, ... , %d)('x' for exit !)   :" , maxDev-1);
+			scan = in.nextLine();
 			if (scan.contains("x")){
 				devInput[0] = 0; //deviceType				
 				break;
 			}			
-			System.out.print("Enter device bus ID (if full duplex then enter 0)   :  ");
+			System.out.print("Enter device bus ID (if full duplex then enter 0)   :");
 			devInput[0] = Integer.parseInt(scan);
 			devInput[1] = in.nextInt(); //deviceID	
-			
+			scan = in.nextLine();
 			System.out.print("\nAgain (Y/N) ?");			
-			scan = in.next();
+			scan = in.nextLine();
 			if (scan.contains("N") || scan.contains("n")){
 				break;
-				}
-		}		
+			}
+		}
 		return devInput;		
 	}
 	
@@ -602,8 +596,9 @@ public class AisShell extends AisWrapper {
 		
 		System.out.println(meni);
 		scan = new Scanner(System.in);
-		while (true){			
-			String choise = scan.nextLine();
+		String choise;
+		while (scan.hasNextLine()){			
+			choise = scan.nextLine();
 			if (choise.contains("x")){
 				break;
 			   }
@@ -620,14 +615,16 @@ public class AisShell extends AisWrapper {
 				AisWrappListEraseAllDeviceForCheck();
 				System.out.println("Clear list for checking !");
 			}
-			if (choise.contains("4")){					
-				deviceType = DevInput()[0];
-				deviceID = DevInput()[1];
+			if (choise.contains("4")){
+				int[] inputDev = DevInput();
+				deviceType = inputDev[0];
+				deviceID = inputDev[1];				
 				System.out.println(ShowResult("AIS_List_AddDeviceForCheck()", deviceType, deviceID));				
 			}
-			if (choise.contains("5")){					
-				deviceType = DevInput()[0];
-				deviceID = DevInput()[1];
+			if (choise.contains("5")){
+				int[] inputDev = DevInput();
+				deviceType = inputDev[0];
+				deviceID = inputDev[1];
 				System.out.println(ShowResult("AIS_List_EraseDeviceForCheck()", deviceType, deviceID));				
 			}	
 		}				
@@ -636,14 +633,14 @@ public class AisShell extends AisWrapper {
  
 	public void RTEListen(S_DEVICE dev, int maxSec){				
 		long stopTime = new Date(System.currentTimeMillis() + ((maxSec*90)*10)).getTime();	
-		System.out.printf("Wait for RTE for %ds...%n", maxSec);
-		while (new Date(System.currentTimeMillis()).getTime()<= stopTime){			
+		System.out.printf("Wait for RTE for %d s...%n", maxSec);	
+		while (new Date().getTime()<= stopTime){			
 			for (Pointer hnd : HND_LIST){
 				dev.hnd = hnd;
 				MainLoop(dev);
 			}
 		}
-		System.out.println("END RTE listen...");
+		System.out.println("END RTE listen...");		
 	}
 	
 	public String LogGet(S_DEVICE dev){				
@@ -823,19 +820,16 @@ public class AisShell extends AisWrapper {
 		
 		if (dev.realTimeEvents != 0){
 			rv = PrintRTE(dev);
-			System.out.println(rv.ret_string);
-			
+			System.out.println(rv.ret_string);			
 		}
 		
 		if (dev.logAvailable != 0){
-			rv = PrintLog(dev);
-			//System.out.print(rv.ret_string);
+			rv = PrintLog(dev);			
 		}
 		
 		if(dev.logUnread != 0){
 			if (dev.logUnreadLast != dev.logUnread){
-				dev.logUnreadLast = dev.logUnread;
-				//System.out.print(printLogUnread(dev));
+				dev.logUnreadLast = dev.logUnread;				
 			}
 		}
 		
@@ -911,8 +905,7 @@ public class AisShell extends AisWrapper {
 		return rv;
 	}
     
-    private void printPercent(int Percent){
-  	  
+    private void printPercent(int Percent){ 
   	  if (progress.printHdr == true){
   		  progress.printHdr = false;
   		  progress.percentOld = -1;		  
@@ -924,10 +917,7 @@ public class AisShell extends AisWrapper {
   		 progress.percentOld ++;
   	  }
     }
-    
-    
-    
-    
+      
     public void DoCmd(S_DEVICE dev){
   	  if (dev.status !=0){
   		  return;
@@ -938,10 +928,8 @@ public class AisShell extends AisWrapper {
   		  rv = MainLoop(dev);		  		  		  		  
   		  if (!rv.ret_state){
   			  break;
-  		  }
-  		  
-  	  }
-  	  
+  		  }  		 
+  	  }  	  
     }   
     
 	
@@ -1171,8 +1159,7 @@ public class AisShell extends AisWrapper {
     	String getDevices;    	
     	PointerByReference dev_type_str = new PointerByReference();
     	int deviceType;
-    	int deviceId;    	
-    	int dlstatus;
+    	int deviceId;    	    	
     	getDevices = AisWrappGetDevicesForCheck();
     	if (getDevices.length() == 0)
     	   {return;}        
@@ -1181,7 +1168,7 @@ public class AisShell extends AisWrapper {
     	  String[] t = item.split(":");
     	  deviceType = Integer.parseInt(t[0]);
     	  deviceId = Integer.parseInt(t[1]);    	 
-    	  dlstatus = libInstance.device_type_enum2str(deviceType, dev_type_str);    	  
+    	  int dlstatus = libInstance.device_type_enum2str(deviceType, dev_type_str);    	  
     	  System.out.printf("     %20s (enum= %d) on ID %d%n", dev_type_str.getValue().getString(0), deviceType, deviceId);     	 
     	}    	    	    
     }
@@ -1228,11 +1215,19 @@ public class AisShell extends AisWrapper {
     	System.out.println(fOut);
     }
     
-   
-    
 	void GetListInformation(){    	    			
 		StringBuilder result = new StringBuilder();
 		StringBuilder res = new StringBuilder();
+		PointerByReference hnd = new PointerByReference();
+	    PointerByReference devSerial = new PointerByReference();
+	    IntByReference devType = new IntByReference();
+		IntByReference devID = new IntByReference();
+		IntByReference devFW_VER = new IntByReference();
+		IntByReference devCommSpeed = new IntByReference();
+	    PointerByReference devFTDI_Serial = new PointerByReference();
+		IntByReference devOpened = new IntByReference();
+	    IntByReference devStatus = new IntByReference();
+		IntByReference systemStatus = new IntByReference();
 		int dlstatus;
 		int devCount = AisWrappListUpdateAndGetCount();
     	if (devCount <= 0) {

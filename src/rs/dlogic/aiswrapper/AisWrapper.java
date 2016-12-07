@@ -15,6 +15,7 @@ import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.ptr.LongByReference;
 import com.sun.jna.ptr.PointerByReference;
 
+import java.lang.reflect.Method;
 import java.util.Date;
 
 
