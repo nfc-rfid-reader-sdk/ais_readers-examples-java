@@ -101,25 +101,25 @@ public class AisShell extends AisWrapper {
 	  
    }
    
-   private String ActiveDevice(AisWrapper.S_DEVICE dev, int index)  {
+   private void ActiveDevice(AisWrapper.S_DEVICE dev, int index)  {
 	 String result = "";
 	 try {
 		dev.hnd = HND_LIST.get(index);		  		   		  
 		dev.idx = HND_LIST.indexOf(dev.hnd) + 1;		
-		result = String.format("Active device [%d] | hnd= 0x%X  %n" , dev.idx, dev.hnd.getInt(0));				
+		result = String.format("Active device [%d] | hnd= 0x%X  %n" , dev.idx, dev.hnd.getInt(0));		
 	} catch (IndexOutOfBoundsException  index_exc) {		
-		System.out.print("\nThe index of the device is not valid !\n");
+		System.out.print("\nThe index of the device is not valid !\n");		
 	} catch (NullPointerException null_exc){
 		
 	}	 
-	   return result;
+	   //return result;
+	 System.out.println(result);
    }
    
    @SuppressWarnings("resource")
    private Boolean MeniLoop(){	   
 	   Scanner terminal = new Scanner(System.in);	   
 	   String mChar = terminal.nextLine();	 	 	   
-
 	   if (mChar.contains("x")){
 		   System.out.println("\nAPPLICATION EXIT NOW !\n");
 		   terminal.close();
@@ -133,8 +133,7 @@ public class AisShell extends AisWrapper {
 		case "q":
 			GetListInformation();
 			break;
-		case "i":			 
-			 System.out.println(ActiveDevice(dev, devicesIndex));
+		case "i":			 			
 		     GetVersion(dev);
 		     GetTime(dev);
 		     System.out.println(libInstance.sys_get_timezone_info().getString(0));
@@ -224,10 +223,9 @@ public class AisShell extends AisWrapper {
 			if (Character.isDigit(mChar.trim().charAt(0))){		  
 				   devicesIndex = Integer.parseInt(mChar)-1;
 				   ActiveDevice(dev, devicesIndex); 
-			   }
-			System.out.println(ActiveDevice(dev, devicesIndex));
+			   }			
 			}catch(StringIndexOutOfBoundsException exc){
-				return true;
+				//;
 			}
 			break;
 		}		  
