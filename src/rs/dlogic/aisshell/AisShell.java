@@ -23,13 +23,21 @@ import com.sun.jna.ptr.PointerByReference;
 
 import rs.dlogic.aiswrapper.AisWrapper;
 import rs.dlogic.aiswrapper.E_KNOWN_DEVICE_TYPES;
-import rs.dlogic.aiswrapper.AisWrapper.RetValues;
-import rs.dlogic.aiswrapper.AisWrapper.S_DEVICE;
 
 
 
 /**
- * @author Vladan
+ * @author D-Logic
+ * {@link www.d-logic.net} 
+ * @author Vladan S  
+ * @version 1.0.0
+ * 
+ */
+
+
+/**
+ * The main class <strong>AisShell</strong> that inherits the <strong>AisWrapper</strong> class 
+ * that contains the implementation of the main functions of the dll. 
  *
  */
 
@@ -64,8 +72,8 @@ public class AisShell extends AisWrapper {
     
    private void MyFormats(){	   
 	   myFormats.add(0, "---------------------------------------------------------------------------------------------------------------------" );
-	   myFormats.add(1, "| indx|  Reader HANDLE   | SerialNm | Type h/d | ID  | FW   | speed   | FTDI: sn   | opened | DevStatus | SysStatus |" );
-	   myFormats.add(2,"| %3d | %016X | %s | %7d  | %2d  | %d  | %7d | %10s | %5d  | %8d  | %9d |\n");	   
+	   myFormats.add(1, "| indx|  Reader HANDLE   | SerialNm | Type h/d | ID   | FW   | speed   | FTDI: sn   | opened | DevStatus | SysStatus |" );
+	   myFormats.add(2,"| %3d | %016X | %s | %7d  | %2d  | %4d  | %7d | %10s | %5d  | %8d  | %9d |\n");	   
    }
    
    private String rteFormat = "| %5d | %32s | %5d | %7d | %5d | %24s | %10d | %s | ";
@@ -100,7 +108,12 @@ public class AisShell extends AisWrapper {
         
 	  
    }
-   
+   /**
+    * The display of the selected devices with his handler
+    * @param dev object of class S_DEVICE
+    * @param index index of the selected device
+    * @exception IndexOutOfBoundsException,NullPointerException  
+    */
    private void ActiveDevice(AisWrapper.S_DEVICE dev, int index)  {
 	 String result = "";
 	 try {
@@ -111,12 +124,16 @@ public class AisShell extends AisWrapper {
 		System.out.print("\nThe index of the device is not valid !\n");		
 	} catch (NullPointerException null_exc){
 		
-	}	 
-	   //return result;
+	}	 	   
 	 System.out.println(result);
    }
    
-   @SuppressWarnings("resource")
+  
+   
+   
+   
+   
+   @SuppressWarnings("resource")    //annotation to prevent resource leak in Scanner class
    private Boolean MeniLoop(){	   
 	   Scanner terminal = new Scanner(System.in);	   
 	   String mChar = terminal.nextLine();	 	 	   
@@ -232,6 +249,12 @@ public class AisShell extends AisWrapper {
 	  return true;
    }
    
+   /**
+    * Create config file from device to the file
+    * @param dev an object of class S_DEVICE
+    */
+   
+      
     @SuppressWarnings("resource")
     public void ConfigFileRead(S_DEVICE dev){    	
     	SimpleDateFormat formatter = new SimpleDateFormat("yyyyMMdd_hhmmss");
@@ -255,6 +278,11 @@ public class AisShell extends AisWrapper {
         
     }
     
+    /**
+     * Send configuration from file to the device
+     * @param dev an object of class S_DEVICE
+     */
+       
     @SuppressWarnings("resource")
     public void ConfigFileWrite(S_DEVICE dev){
     	String fileName = "BaseHD-xxx.config";
@@ -273,6 +301,13 @@ public class AisShell extends AisWrapper {
     	System.out.printf("AIS_Config_Send():%s", libInstance.dl_status2str(rv.dl_status).getString(0));
     }
     
+    /**
+     * Firmware update of the device
+     * @param dev object of class S_DEVICE
+     */
+    
+    
+    
     @SuppressWarnings("resource")
     public void FwUpdate(S_DEVICE dev){
     	System.out.println("Flashing firmware part.\nFlash firmware for selected device.");
@@ -289,6 +324,10 @@ public class AisShell extends AisWrapper {
     	System.out.printf("%nAIS_FW_Update(%s)> %s%n",input.toString(), libInstance.dl_status2str(dev.status).getString(0));
     }
     
+    /**
+     * functions for working with the Gate
+     * @param dev
+     */
     
     public void GetIOState(S_DEVICE dev){    	
     	rv = AisWrappGetIOState(dev);
@@ -303,8 +342,6 @@ public class AisShell extends AisWrapper {
     			         libInstance.dl_status2str(rv.dl_status).getString(0));
     }
     
-    
-    
     public void LockOpen(S_DEVICE dev){    	    	
     	int pulseDuration = PULSE_DURATION; 
     	rv = AisWrappLockOpen(dev, pulseDuration);
@@ -313,17 +350,24 @@ public class AisShell extends AisWrapper {
     }
     
     
-    
+    /**
+     * Open all devices 
+     * @return devices handler and error value
+     */
     public String Open(){
        int dlstatus; 
  	   StringBuilder out = new StringBuilder();  	    	  
- 	   for (Pointer hnd : HND_LIST){		   		   		  
+ 	   for (Pointer hnd : HND_LIST){ 
  		   dlstatus = libInstance.AIS_Open(hnd); 		  
  		   out.append(String.format("AIS_Open(0x%X):%s%n", hnd.getInt(0), libInstance.dl_status2str(dlstatus).getString(0)));		   
  	   } 	   
  	   return out.toString(); 
     }
     
+    /**
+     * Close all devices
+     * @return devices handler and error value
+     */
     String Close(){
        int dlstatus; 	
        StringBuilder out = new StringBuilder(); 
@@ -334,6 +378,10 @@ public class AisShell extends AisWrapper {
  	   return out.toString();
     }
    
+    /**
+     * Get Time value from device
+     * @param dev object of class S_DEVICE
+     */
 
     public void GetTime(S_DEVICE dev){
     	String fOut;    	    	    	    	
@@ -345,7 +393,10 @@ public class AisShell extends AisWrapper {
     	System.out.println(fOut);    	    
     }
     
-  
+   /**
+    * Set Time value to device
+    * @param dev object of class S_DEVICE
+    */
     void SetTime(S_DEVICE dev){
     	String fOut;    	    	    	    	
     	rv = AisWrappSetTime(dev.hnd, PASS);    	    	    
@@ -356,7 +407,10 @@ public class AisShell extends AisWrapper {
     	System.out.println(fOut); 
     }
    
-    
+    /**
+     * Reading black list from device
+     * @param dev object of class S_DEVICE
+     */
     
     public void BlackListRead(S_DEVICE dev){
     	String fOut;    	    	    	    	
@@ -365,8 +419,13 @@ public class AisShell extends AisWrapper {
     			             rv.listSize, rv.strList, libInstance.dl_status2str(rv.dl_status).getString(0) );
     	System.out.println(fOut);
     }
+    
+    /**
+     * Write black list from console into the device
+     * @param dev object of class S_DEVICE 
+     */
    
-    @SuppressWarnings("resource")
+    @SuppressWarnings("resource")  //prevent resource leak
     public void BlackListWrite(S_DEVICE dev){
     	String fOut;    	    	    	    
 		Scanner inputBL = new Scanner(System.in);
@@ -380,6 +439,11 @@ public class AisShell extends AisWrapper {
         
     }
     
+    /**
+     * Reading white list from device
+     * @param dev object of class S_DEVICE
+     */
+    
   
     public void WhiteListRead(S_DEVICE dev) 
     {
@@ -389,6 +453,11 @@ public class AisShell extends AisWrapper {
     			             rv.listSize, rv.strList, libInstance.dl_status2str(rv.dl_status).getString(0) );
     	System.out.println(fOut); 	
     }
+    
+    /**
+     * Write black list from console into the device
+     * @param dev object of class S_DEVICE 
+     */
     
     @SuppressWarnings ("resource")
     void WhiteListWrite(S_DEVICE dev){
@@ -411,7 +480,14 @@ public class AisShell extends AisWrapper {
    	    Lights.put(RED_SLAVE, false);     	  
     }
     
-    
+    /**
+     * Light controls for device.
+     * <strong>green master</strong> control green light on master unit
+     * <strong>red master</strong> control red light on master unit
+     * <strong>green slave</strong> control green light on slave unit
+     * <strong>red slave</strong> control red slight on slave unit
+     * @param dev object of class S_DEVICE
+     */
     
 	@SuppressWarnings("resource")
 	public void TestLights(S_DEVICE dev){
@@ -453,13 +529,16 @@ public class AisShell extends AisWrapper {
     			String fOut = String.format("%nAIS_LightControl(master:green= %d | master:red= %d || slave:green= %d | slave:sred= %d) > %s", 
     					              greenMaster, redMaster, greenSlave, redSlave, libInstance.dl_status2str(rv.dl_status).getString(0));
     			System.out.println(fOut);
-    			CleanMapLights();
+    			CleanMapLights();  //reset values
     			print = false;
     		}    			
     	}     	   	   
    }
 
-	
+	/**
+	 * 
+	 * @return
+	 */
 	
 
 	public String PrintAvailableDevices(){		
@@ -628,6 +707,11 @@ public class AisShell extends AisWrapper {
 		}				
 	}
 
+	/**
+	 * Listening to all the devices event RT within a specific time interval
+	 * @param dev object of class S_DEVICE
+	 * @param maxSec max seconds for listening
+	 */
  
 	public void RTEListen(S_DEVICE dev, int maxSec){				
 		long stopTime = new Date(System.currentTimeMillis() + ((maxSec*90)*10)).getTime();	
@@ -640,6 +724,13 @@ public class AisShell extends AisWrapper {
 		}
 		System.out.println("END RTE listen...");		
 	}
+	
+	
+	/**
+	 * View all the logs from device
+	 * @param dev object of class S_DEVICE
+	 * @return Show logs of device in a table format
+	 */
 	
 	public String LogGet(S_DEVICE dev){				
 		byte[] pass = PASS.getBytes();
@@ -654,6 +745,12 @@ public class AisShell extends AisWrapper {
 			  + rteListHeader[0]
 			  + String.format("%nAIS_GetLog() %s%n",  libInstance.dl_status2str(dev.status).getString(0));		
 	}
+	
+	
+	/**
+	 * Firm
+	 * @param dev
+	 */
 	
 	public void GetVersion(S_DEVICE dev){		
 		rv = AisWrappGetVersion(dev);
@@ -1216,7 +1313,8 @@ public class AisShell extends AisWrapper {
 	void GetListInformation(){    	    			
 		StringBuilder result = new StringBuilder();
 		StringBuilder res = new StringBuilder();
-		PointerByReference hnd = new PointerByReference();
+		
+		//PointerByReference hnd = new PointerByReference();
 	    PointerByReference devSerial = new PointerByReference();
 	    IntByReference devType = new IntByReference();
 		IntByReference devID = new IntByReference();
@@ -1226,6 +1324,7 @@ public class AisShell extends AisWrapper {
 		IntByReference devOpened = new IntByReference();
 	    IntByReference devStatus = new IntByReference();
 		IntByReference systemStatus = new IntByReference();
+		
 		int dlstatus;
 		int devCount = AisWrappListUpdateAndGetCount();
     	if (devCount <= 0) {
@@ -1235,7 +1334,14 @@ public class AisShell extends AisWrapper {
     	{    		
 	    	HND_LIST.clear();	    
 	    	for (int i = 0;i<devCount;i++)
-	    	{	    		    		
+	    	{	
+	    		
+	    		PointerByReference hnd = new PointerByReference();
+	    		
+	    		System.out.println(hnd.getValue());
+	    		
+	    		
+	    		
 	    		dlstatus = libInstance.AIS_List_GetInformation(hnd, 
 	    				                                        devSerial, 
 	    				                                        devType, 
@@ -1246,12 +1352,17 @@ public class AisShell extends AisWrapper {
 	    				                                        devOpened, 
 	    				                                        devStatus, 
 	    				                                        systemStatus);
+	    		System.out.println(hnd.getValue());
+	    		
+	    		
 	    		if (dlstatus !=0){ 
 	    			return;    		
 	    		}
-	    		HND_LIST.add(hnd.getValue());    		
-	    		Open();
-	    		dev.idx = 1;
+	    		    			    	
+	    		HND_LIST.add(hnd.getValue());    
+	    			    		
+	    		Open();	    		
+	    		dev.idx = i+1;
 	    		dev.hnd = hnd.getValue(); 	            
 	            dev.devSerial = devSerial.getValue().getString(0); 	            	            	            	            	            	            	            
 	            dev.devType = devType.getValue();
@@ -1261,12 +1372,9 @@ public class AisShell extends AisWrapper {
 	            dev.devFTDI_Serial = devFTDI_Serial.getValue().getString(0);                                 
 	            dev.devOpened = devOpened.getValue();
 	            dev.devStatus = devStatus.getValue();
-	            dev.systemStatus = devStatus.getValue();
-	           
-	            System.out.println(myFormats.get(0) + "\n" + myFormats.get(1) + "\n" + myFormats.get(0));                                          
-	    		try {  
-	    			    			
-					result.append(String.format(myFormats.get(2),
+	            dev.systemStatus = systemStatus.getValue();
+	           	                                                    	    			    			    	
+				result.append(String.format(myFormats.get(2),
 							         dev.idx,
 							         dev.hnd.getInt(0),
 							         dev.devSerial,
@@ -1277,16 +1385,15 @@ public class AisShell extends AisWrapper {
 							         dev.devFTDI_Serial,
 							         dev.devOpened,
 							         dev.devStatus,
-							         dev.systemStatus)
-							    );
-				   res.append(result.toString() + myFormats.get(0));			         
-			       System.out.println(res.toString());
-					
-					
-				} catch (Exception e) {				
-					e.printStackTrace();
-				}
-	    	}    		    	
+							         dev.systemStatus));
+							 
+					    		
+	    	} 
+	    	res.append(myFormats.get(0) + "\n");
+	    	 res.append(myFormats.get(1) + "\n");
+	    	  res.append(myFormats.get(0) + "\n");
+	    	   res.append(result.toString() + myFormats.get(0));			         
+		    System.out.println(res.toString());		
     	}
     	
 }
