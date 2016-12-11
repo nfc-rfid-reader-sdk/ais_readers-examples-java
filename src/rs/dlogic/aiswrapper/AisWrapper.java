@@ -15,11 +15,17 @@ import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.ptr.LongByReference;
 import com.sun.jna.ptr.PointerByReference;
 
+import rs.dlogic.aiswrapper.AisWrapper.RetValues;
+import rs.dlogic.aiswrapper.AisWrapper.S_DEVICE;
+import rs.dlogic.aiswrapper.AisWrapper.S_PROGRESS;
+
+import java.awt.event.ActionListener;
 import java.util.Date;
 
 
 
 public class AisWrapper {			
+	
 	
 	public class S_PROGRESS{
 		public boolean printHdr;
@@ -87,6 +93,7 @@ public class AisWrapper {
 	
 	
 	
+	S_PROGRESS progress = new S_PROGRESS();
 	public static AisLibrary libInstance;
 	RetValues rv = new RetValues();
 	public AisWrapper(){
@@ -275,7 +282,115 @@ public class AisWrapper {
     	return rv;
     }
  
-    
+    protected RetValues AisWrapMainLoop(S_DEVICE dev){		
+		
+    	IntByReference realTimeEvents = new IntByReference();
+		IntByReference logAvailable = new IntByReference();
+		IntByReference unreadLog = new IntByReference();
+		IntByReference cmdResponses = new IntByReference();    
+		IntByReference cmdPercent = new IntByReference();
+		IntByReference devStatus = new IntByReference();
+		IntByReference timeOutOccured = new IntByReference();
+		IntByReference _status = new IntByReference();
+		
+		dev.status = libInstance.AIS_MainLoop(dev.hnd, 
+				      realTimeEvents, 
+				      logAvailable, 
+				      unreadLog, 
+				      cmdResponses, 
+				      cmdPercent, 
+				      devStatus, 
+				      timeOutOccured, 
+				      _status);
+		
+		dev.realTimeEvents = realTimeEvents.getValue();
+		dev.logAvailable = logAvailable.getValue();
+		dev.logUnread = unreadLog.getValue();
+		dev.cmdResponses = cmdResponses.getValue();
+		dev.cmdPercent = cmdPercent.getValue();
+		dev.devStatus = devStatus.getValue();
+		dev.timeOutOccured = timeOutOccured.getValue();
+		dev.Status = _status.getValue();
+		
+		if (dev.status != 0){
+			if (dev.statusLast != dev.status){
+			   System.out.println(libInstance.dl_status2str(dev.status).getString(0));			   
+			}
+			dev.statusLast = dev.status;
+			rv.ret_state = false;
+			return rv;
+		}
+		
+		//if (dev.realTimeEvents != 0){	
+			//SetRTE(dev.realTimeEvents);
+		//}
+		
+		//if (dev.logAvailable != 0){			
+			//GetLOG(dev);
+		//}
+		
+		if(dev.logUnread != 0){
+			if (dev.logUnreadLast != dev.logUnread){
+				dev.logUnreadLast = dev.logUnread;				
+			}
+		}
+		
+		if (dev.timeOutOccured != 0){
+			System.out.printf("TimeoutOccurred= %d%n" , dev.timeOutOccured);
+		}
+		 
+		if (dev.Status != 0){
+			System.out.printf("[%d] local_status= %s%n", dev.idx, libInstance. dl_status2str(dev.Status).getString(0));
+		}
+		
+		if (dev.cmdPercent != 0){
+			printPercent(dev.cmdPercent);
+		}
+		
+		if (dev.cmdResponses != 0){
+			dev.cmdFinish = true;
+			System.out.print("\n-- COMMAND FINISH !\n");
+		}
+		rv.ret_state = true;
+		return rv;
+	}   
+   
+//   private int rteValue;
+//   protected int GetRTE() {
+//		return rteValue;		
+//	}
+// private void SetRTE(int value){
+//	  this.rteValue = value;
+//  }
+   
+private void printPercent(int Percent){ 
+      
+  	  if (progress.printHdr == true){
+  		  progress.printHdr = false;
+  		  progress.percentOld = -1;		  
+  	  }
+  	  while (progress.percentOld != Percent){
+  		 if (progress.percentOld < 100){
+  			 System.out.print(".");
+  		 }
+  		 progress.percentOld ++;
+  	  }
+    }
+       
+    public void DoCmd(S_DEVICE dev){
+     
+      if (dev.status !=0){
+  		  return;
+  		 }
+  	  dev.cmdFinish = false;
+  	  progress.printHdr = true;
+  	  while(!dev.cmdFinish){
+  		  rv = AisWrapMainLoop(dev);		  		  		  		  
+  		  if (!rv.ret_state){
+  			  break;
+  		  }  		 
+  	  }  	  
+    }   
     
     
     
@@ -395,6 +510,9 @@ public interface AisLibrary extends Library{
 							);
 
   
+   
+
+   
    
    
    int AIS_Open(Pointer device); 
@@ -563,4 +681,6 @@ public interface AisLibrary extends Library{
 		                IntByReference isAloneOnTheBus);
   
   }
+
+
 }

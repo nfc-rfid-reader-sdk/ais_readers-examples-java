@@ -9,7 +9,6 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -35,6 +34,9 @@ import rs.dlogic.aiswrapper.E_KNOWN_DEVICE_TYPES;
  */
 
 
+
+
+
 /**
  * The main class <strong>AisShell</strong> that inherits the <strong>AisWrapper</strong> class 
  * that contains the implementation of the main functions of the dll. 
@@ -44,7 +46,7 @@ import rs.dlogic.aiswrapper.E_KNOWN_DEVICE_TYPES;
 
 public class AisShell extends AisWrapper {	
 	
-	S_PROGRESS progress = new S_PROGRESS();
+
     S_DEVICE dev = new S_DEVICE();
     RetValues rv = new RetValues();
     
@@ -319,7 +321,7 @@ public class AisShell extends AisWrapper {
     		return;
     	}
     	System.out.print("\nWait,please ... ");
-    	progress.printHdr = true;
+    	new S_PROGRESS().printHdr = true;
     	dev.status = libInstance.AIS_FW_Update(dev.hnd, input.toString(), 0);
     	System.out.printf("%nAIS_FW_Update(%s)> %s%n",input.toString(), libInstance.dl_status2str(dev.status).getString(0));
     }
@@ -719,7 +721,11 @@ public class AisShell extends AisWrapper {
 		while (new Date().getTime()<= stopTime){			
 			for (Pointer hnd : HND_LIST){
 				dev.hnd = hnd;
-				MainLoop(dev);
+				AisWrapMainLoop(dev);
+				if (dev.realTimeEvents != 0){
+					rv = PrintRTE(dev);
+					System.out.println(rv.ret_string);
+				}
 			}
 		}
 		System.out.println("END RTE listen...");		
@@ -739,7 +745,7 @@ public class AisShell extends AisWrapper {
 			return libInstance.dl_status2str(dev.status).getString(0);			
 		}
 		DoCmd(dev);
-		rv = PrintLog(dev);	
+		rv = PrintLog(dev);		
 		return rteHead
 			  + rv.ret_string 
 			  + rteListHeader[0]
@@ -875,79 +881,7 @@ public class AisShell extends AisWrapper {
 		return rv;
 	}
 	
-    public RetValues MainLoop(S_DEVICE dev){		
-		IntByReference realTimeEvents = new IntByReference();
-		IntByReference logAvailable = new IntByReference();
-		IntByReference unreadLog = new IntByReference();
-		IntByReference cmdResponses = new IntByReference();    
-		IntByReference cmdPercent = new IntByReference();
-		IntByReference devStatus = new IntByReference();
-		IntByReference timeOutOccured = new IntByReference();
-		IntByReference _status = new IntByReference();
-						
-		dev.status = libInstance.AIS_MainLoop(dev.hnd, 
-				      realTimeEvents, 
-				      logAvailable, 
-				      unreadLog, 
-				      cmdResponses, 
-				      cmdPercent, 
-				      devStatus, 
-				      timeOutOccured, 
-				      _status);
-		
-		dev.realTimeEvents = realTimeEvents.getValue();
-		dev.logAvailable = logAvailable.getValue();
-		dev.logUnread = unreadLog.getValue();
-		dev.cmdResponses = cmdResponses.getValue();
-		dev.cmdPercent = cmdPercent.getValue();
-		dev.devStatus = devStatus.getValue();
-		dev.timeOutOccured = timeOutOccured.getValue();
-		dev.Status = _status.getValue();
-		
-		if (dev.status != 0){
-			if (dev.statusLast != dev.status){
-			   System.out.println(libInstance.dl_status2str(dev.status).getString(0));			   
-			}
-			dev.statusLast = dev.status;
-			rv.ret_state = false;
-			return rv;
-		}
-		
-		if (dev.realTimeEvents != 0){
-			rv = PrintRTE(dev);
-			System.out.println(rv.ret_string);			
-		}
-		
-		if (dev.logAvailable != 0){
-			rv = PrintLog(dev);			
-		}
-		
-		if(dev.logUnread != 0){
-			if (dev.logUnreadLast != dev.logUnread){
-				dev.logUnreadLast = dev.logUnread;				
-			}
-		}
-		
-		if (dev.timeOutOccured != 0){
-			System.out.printf("TimeoutOccurred= %d\n" , dev.timeOutOccured);
-		}
-		 
-		if (dev.Status != 0){
-			System.out.printf("[%d] local_status= %s\n", dev.idx, libInstance. dl_status2str(dev.Status).getString(0));
-		}
-		
-		if (dev.cmdPercent != 0){
-			printPercent(dev.cmdPercent);
-		}
-		
-		if (dev.cmdResponses != 0){
-			dev.cmdFinish = true;
-			System.out.print("\n-- COMMAND FINISH !\n");
-		}
-		rv.ret_state = true;
-		return rv;
-	}   
-   
+  
     public RetValues PrintRTE(S_DEVICE dev){
 		String res; 
 		StringBuilder result = new StringBuilder();
@@ -970,6 +904,7 @@ public class AisShell extends AisWrapper {
 		
 		while (true){			
 			dev.status = libInstance.AIS_ReadRTE(dev.hnd, logIndex, logAction, logReaderID, logCardID, logSystemID, nfcUid, nfcUidLen, timeStamp);			
+			
 			dev.log.index = logIndex.getValue();
 			dev.log.action = logAction.getValue();
 			dev.log.readerID = logReaderID.getValue();
@@ -996,36 +931,10 @@ public class AisShell extends AisWrapper {
 		res = result + "\n"			  
 			  + rteListHeader[0] 
 			  + "\n";				
-		rv.ret_string = rteHead + res + String.format("LOG unread (incremental) = %d %s\n", dev.logUnread, libInstance.dl_status2str(dev.status).getString(0));
+		rv.ret_string = rteHead + res + String.format("LOG unread (incremental) = %d %s%n", dev.logUnread, libInstance.dl_status2str(dev.status).getString(0));
 		return rv;
 	}
-    
-    private void printPercent(int Percent){ 
-  	  if (progress.printHdr == true){
-  		  progress.printHdr = false;
-  		  progress.percentOld = -1;		  
-  	  }
-  	  while (progress.percentOld != Percent){
-  		 if (progress.percentOld < 100){
-  			 System.out.print(".");
-  		 }
-  		 progress.percentOld ++;
-  	  }
-    }
-      
-    public void DoCmd(S_DEVICE dev){
-  	  if (dev.status !=0){
-  		  return;
-  		 }
-  	  dev.cmdFinish = false;
-  	  progress.printHdr = true;
-  	  while(!dev.cmdFinish){
-  		  rv = MainLoop(dev);		  		  		  		  
-  		  if (!rv.ret_state){
-  			  break;
-  		  }  		 
-  	  }  	  
-    }   
+
     
 	
   /**
@@ -1039,7 +948,7 @@ public class AisShell extends AisWrapper {
  
      
     public RetValues UnreadLogCount(S_DEVICE dev){     	
-    	MainLoop(dev);
+    	rv = AisWrapMainLoop(dev);     
     	rv.ret_string = printLogUnread(dev);
     	return rv;
     }
@@ -1201,7 +1110,7 @@ public class AisShell extends AisWrapper {
     	System.out.println("checking...please wait...");
     	int devCount = AisWrappListUpdateAndGetCount();    	    
     	System.out.printf("AIS_List_UpdateAndGetCount()= [%d]%n", devCount); 
-    	if (devCount >0){
+    	if (devCount > 0){
     		GetListInformation();
     	}else
     		System.out.println("NO DEVICE FOUND!");
@@ -1314,7 +1223,7 @@ public class AisShell extends AisWrapper {
 		StringBuilder result = new StringBuilder();
 		StringBuilder res = new StringBuilder();
 		
-		//PointerByReference hnd = new PointerByReference();
+		PointerByReference hnd = new PointerByReference();
 	    PointerByReference devSerial = new PointerByReference();
 	    IntByReference devType = new IntByReference();
 		IntByReference devID = new IntByReference();
@@ -1334,14 +1243,7 @@ public class AisShell extends AisWrapper {
     	{    		
 	    	HND_LIST.clear();	    
 	    	for (int i = 0;i<devCount;i++)
-	    	{	
-	    		
-	    		PointerByReference hnd = new PointerByReference();
-	    		
-	    		System.out.println(hnd.getValue());
-	    		
-	    		
-	    		
+	    	{		    		    	
 	    		dlstatus = libInstance.AIS_List_GetInformation(hnd, 
 	    				                                        devSerial, 
 	    				                                        devType, 
@@ -1351,16 +1253,12 @@ public class AisShell extends AisWrapper {
 	    				                                        devFTDI_Serial,    				                                        
 	    				                                        devOpened, 
 	    				                                        devStatus, 
-	    				                                        systemStatus);
-	    		System.out.println(hnd.getValue());
-	    		
-	    		
+	    				                                        systemStatus);	    			    			    		
 	    		if (dlstatus !=0){ 
 	    			return;    		
 	    		}
 	    		    			    	
-	    		HND_LIST.add(hnd.getValue());    
-	    			    		
+	    		HND_LIST.add(hnd.getValue());    	    		    
 	    		Open();	    		
 	    		dev.idx = i+1;
 	    		dev.hnd = hnd.getValue(); 	            
@@ -1418,5 +1316,6 @@ public class AisShell extends AisWrapper {
        System.exit(0);      
        return;
 	}
+	
 
 }
