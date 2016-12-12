@@ -121,7 +121,7 @@ public class AisShell extends AisWrapper {
 	 try {
 		dev.hnd = HND_LIST.get(index);		  		   		  
 		dev.idx = HND_LIST.indexOf(dev.hnd) + 1;		
-		result = String.format("Active device [%d] | hnd= 0x%X  %n" , dev.idx, dev.hnd.getInt(0));		
+		result = String.format("Active device [%d] | hnd= 0x%X  %n" , dev.idx, dev.hnd.hashCode());		
 	} catch (IndexOutOfBoundsException  index_exc) {		
 		System.out.print("\nThe index of the device is not valid !\n");		
 	} catch (NullPointerException null_exc){
@@ -361,7 +361,7 @@ public class AisShell extends AisWrapper {
  	   StringBuilder out = new StringBuilder();  	    	  
  	   for (Pointer hnd : HND_LIST){ 
  		   dlstatus = libInstance.AIS_Open(hnd); 		  
- 		   out.append(String.format("AIS_Open(0x%X):%s%n", hnd.getInt(0), libInstance.dl_status2str(dlstatus).getString(0)));		   
+ 		   out.append(String.format("AIS_Open(0x%X):%s%n", hnd.hashCode(), libInstance.dl_status2str(dlstatus).getString(0)));		   
  	   } 	   
  	   return out.toString(); 
     }
@@ -375,7 +375,7 @@ public class AisShell extends AisWrapper {
        StringBuilder out = new StringBuilder(); 
  	   for (Pointer hnd : HND_LIST){
  		   dlstatus = libInstance.AIS_Close(hnd);		   
- 		   out.append(String.format("AIS_Close(0x%X):%s%n", hnd.getInt(0), libInstance.dl_status2str(dlstatus).getString(0))); 				                       	  
+ 		   out.append(String.format("AIS_Close(0x%X):%s%n", hnd.hashCode(), libInstance.dl_status2str(dlstatus).getString(0))); 				                       	  
  	   }
  	   return out.toString();
     }
@@ -389,7 +389,7 @@ public class AisShell extends AisWrapper {
     	String fOut;    	    	    	    	
     	rv = AisWrappGetTime(dev.hnd);    	    	    
     	fOut = String.format("%nAIS_GetTime(dev[%d] hnd=0x%X):%s > (currentTime= %d | tz= %d | dst= %d | offset= %d): %s%n",
-    			              dev.idx, dev.hnd.getInt(0), libInstance.dl_status2str(rv.dl_status).getString(0), rv.currentTime, rv.timezone, rv.DST, rv.offset,
+    			              dev.idx, dev.hnd.hashCode(), libInstance.dl_status2str(rv.dl_status).getString(0), rv.currentTime, rv.timezone, rv.DST, rv.offset,
     			               new Date(rv.currentTime).toString() 
     			               );    	    	   
     	System.out.println(fOut);    	    
@@ -403,7 +403,7 @@ public class AisShell extends AisWrapper {
     	String fOut;    	    	    	    	
     	rv = AisWrappSetTime(dev.hnd, PASS);    	    	    
     	fOut = String.format("%nAIS_SetTime(dev[%d] hnd=0x%X) %s > (currentTime= %d | tz= %d | dst= %d | offset= %d): %s%n",
-    			               dev.idx, dev.hnd.getInt(0), libInstance.dl_status2str(rv.dl_status).getString(0), rv.currentTime, rv.timezone, rv.DST, rv.offset,
+    			               dev.idx, dev.hnd.hashCode(), libInstance.dl_status2str(rv.dl_status).getString(0), rv.currentTime, rv.timezone, rv.DST, rv.offset,
     			               new Date(rv.currentTime).toString()
     			               );    	    	   
     	System.out.println(fOut); 
@@ -1274,7 +1274,7 @@ public class AisShell extends AisWrapper {
 	           	                                                    	    			    			    	
 				result.append(String.format(myFormats.get(2),
 							         dev.idx,
-							         dev.hnd.getInt(0),
+							         dev.hnd.hashCode(),
 							         dev.devSerial,
 							         dev.devType,
 							         dev.devID,
