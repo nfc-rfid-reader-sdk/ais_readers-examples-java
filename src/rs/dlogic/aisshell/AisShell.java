@@ -60,6 +60,8 @@ public class AisShell extends AisWrapper implements MObserver {
     @Override
 	public void update(boolean RTEEvent) {	    	
     	this.eventRTE = RTEEvent;
+    	rv = PrintRTE();
+    	System.out.println(rv.ret_string);
 	}
     
     public AisShell(){
@@ -735,10 +737,10 @@ public class AisShell extends AisWrapper implements MObserver {
 			for (Pointer hnd : HND_LIST){
 				dev.hnd = hnd;
 				AisWrapMainLoop(dev);				
-				if (this.eventRTE == true){					
-					rv = PrintRTE(dev);
-					System.out.println(rv.ret_string);
-				}
+//				if (this.eventRTE == true){					
+//					rv = PrintRTE(dev);
+//					System.out.println(rv.ret_string);
+//				}
 				this.eventRTE = false;
 			}
 		}
@@ -896,7 +898,7 @@ public class AisShell extends AisWrapper implements MObserver {
 	}
 	
   
-    public RetValues PrintRTE(S_DEVICE dev){
+    public RetValues PrintRTE(){
 		String res; 
 		StringBuilder result = new StringBuilder();
 		StringBuilder nfcuid = new StringBuilder();		
