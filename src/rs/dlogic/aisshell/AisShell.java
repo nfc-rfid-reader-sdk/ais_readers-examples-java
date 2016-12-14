@@ -13,6 +13,8 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Observable;
+import java.util.Observer;
 import java.util.Scanner;
 
 import com.sun.jna.Pointer;
@@ -20,8 +22,11 @@ import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.ptr.LongByReference;
 import com.sun.jna.ptr.PointerByReference;
 
+import javafx.beans.InvalidationListener;
 import rs.dlogic.aiswrapper.AisWrapper;
 import rs.dlogic.aiswrapper.E_KNOWN_DEVICE_TYPES;
+import rs.dlogic.aiswrapper.MObservable;
+import rs.dlogic.aiswrapper.MObserver;
 
 
 
@@ -44,13 +49,20 @@ import rs.dlogic.aiswrapper.E_KNOWN_DEVICE_TYPES;
  */
 
 
-public class AisShell extends AisWrapper {	
+public class AisShell extends AisWrapper implements MObserver {	
 	
 
     S_DEVICE dev = new S_DEVICE();
     RetValues rv = new RetValues();
     
-    AisShell(){
+    private boolean eventRTE;
+    
+    @Override
+	public void update(boolean RTEEvent) {	    	
+    	this.eventRTE = RTEEvent;
+	}
+    
+    public AisShell(){
     	libInstance = AisLibrary.aisReaders;
     }
   
@@ -715,17 +727,19 @@ public class AisShell extends AisWrapper {
 	 * @param maxSec max seconds for listening
 	 */
  
-	public void RTEListen(S_DEVICE dev, int maxSec){				
+	public void RTEListen(S_DEVICE dev, int maxSec){		
+		addObserver(this);		
 		long stopTime = new Date(System.currentTimeMillis() + ((maxSec*90)*10)).getTime();	
 		System.out.printf("Wait for RTE for %d s...%n", maxSec);	
 		while (new Date().getTime()<= stopTime){			
 			for (Pointer hnd : HND_LIST){
 				dev.hnd = hnd;
-				AisWrapMainLoop(dev);
-				if (dev.realTimeEvents != 0){
+				AisWrapMainLoop(dev);				
+				if (this.eventRTE == true){					
 					rv = PrintRTE(dev);
 					System.out.println(rv.ret_string);
 				}
+				this.eventRTE = false;
 			}
 		}
 		System.out.println("END RTE listen...");		
@@ -1316,6 +1330,14 @@ public class AisShell extends AisWrapper {
        System.exit(0);      
        return;
 	}
+
+	
+
+	
+
+	
+
+	
 	
 
 }

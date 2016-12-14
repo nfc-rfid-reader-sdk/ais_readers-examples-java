@@ -15,16 +15,50 @@ import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.ptr.LongByReference;
 import com.sun.jna.ptr.PointerByReference;
 
+import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
+import rs.dlogic.aisshell.AisShell;
 import rs.dlogic.aiswrapper.AisWrapper.RetValues;
 import rs.dlogic.aiswrapper.AisWrapper.S_DEVICE;
 import rs.dlogic.aiswrapper.AisWrapper.S_PROGRESS;
 
 import java.awt.event.ActionListener;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.Observer;
 
 
 
-public class AisWrapper {			
+public class AisWrapper implements MObservable {			
+	
+	private ArrayList<MObserver> observers = new ArrayList<MObserver>();
+	
+	private Boolean eventRTE =  false;
+		
+	public void SetEventRTE(boolean event_rte){
+		this.eventRTE = event_rte;
+		if (this.eventRTE == true)
+			notifyObserver(this.eventRTE);		
+	}
+	
+	@Override
+	public void addObserver(MObserver o) {
+		observers.add(o);
+	}
+
+	@Override
+	public void removeObserver(MObserver o) {		
+		observers.remove(o);
+	}
+	
+	@Override
+	public void notifyObserver(boolean event){		
+			for (MObserver ob : observers){			
+				ob.update(this.eventRTE);
+			}				
+	}
+	
+	
 	
 	
 	public class S_PROGRESS{
@@ -321,13 +355,14 @@ public class AisWrapper {
 			return rv;
 		}
 		
-		//if (dev.realTimeEvents != 0){	
-			//SetRTE(dev.realTimeEvents);
-		//}
+		if (dev.realTimeEvents != 0){				
+			SetEventRTE(true);
+		}else
+			SetEventRTE(false);
 		
-		//if (dev.logAvailable != 0){			
-			//GetLOG(dev);
-		//}
+//		if (dev.logAvailable != 0){			
+//			
+//		}
 		
 		if(dev.logUnread != 0){
 			if (dev.logUnreadLast != dev.logUnread){
@@ -355,13 +390,6 @@ public class AisWrapper {
 		return rv;
 	}   
    
-//   private int rteValue;
-//   protected int GetRTE() {
-//		return rteValue;		
-//	}
-// private void SetRTE(int value){
-//	  this.rteValue = value;
-//  }
    
 private void printPercent(int Percent){ 
       
@@ -681,6 +709,18 @@ public interface AisLibrary extends Library{
 		                IntByReference isAloneOnTheBus);
   
   }
+
+//@Override
+//public void notifyObserver(java.lang.Object dev) {
+//	// TODO Auto-generated method stub
+//	
+//}
+
+
+
+
+
+
 
 
 }
