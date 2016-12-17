@@ -94,7 +94,7 @@ public class AisWrapper implements MObservable {
 	   public int hardwareType;
 	   public int firmwareVersion;
 	   public Boolean ret_state;
-	   public String ret_string;
+	   public String ret_string;	   
 	}
 	
 	

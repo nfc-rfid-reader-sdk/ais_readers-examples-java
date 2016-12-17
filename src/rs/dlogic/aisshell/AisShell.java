@@ -170,6 +170,7 @@ public class AisShell extends AisWrapper implements MObserver {
 		     GetVersion(dev);
 		     GetTime(dev);
 		     System.out.println(libInstance.sys_get_timezone_info().getString(0));
+		     GetBatteryStatus(dev);
 		     break;
 		case "c": 
 			System.out.println(Close());
@@ -177,7 +178,7 @@ public class AisShell extends AisWrapper implements MObserver {
 		case "m":
 			System.out.print(ShowMeni());
 			break;
-		case "d": //Get devices count
+		case "d":     //Get devices count
 			System.out.printf("DEVICE COUNT: %d%n" ,AisWrappListUpdateAndGetCount());
 			break;
 		case "t":			
@@ -770,7 +771,22 @@ public class AisShell extends AisWrapper implements MObserver {
 	
 	
 	/**
-	 * Firm
+	 * Read battery status of device
+	 * @param class instance S_DEVICE dev 
+	 */
+	
+	public void GetBatteryStatus(S_DEVICE dev){
+	    IntByReference batteryStatus = new IntByReference();
+	    IntByReference percent = new IntByReference();
+		int status = libInstance.AIS_BatteryGetInfo(dev.hnd, batteryStatus, percent);
+		System.out.printf("AIS_BatteryGetInfo() | %s Battery status: %d Percent: %d%n", libInstance.dl_status2str(dev.status).getString(0), batteryStatus.getValue(), percent.getValue());
+				
+	}
+	
+	
+	
+	/**
+	 * Firmware and hardware version
 	 * @param dev
 	 */
 	
